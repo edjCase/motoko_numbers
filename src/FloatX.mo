@@ -3,7 +3,7 @@ import Nat32 "mo:base/Nat32";
 import Nat64 "mo:base/Nat64";
 import Int64 "mo:base/Int64";
 import Float "mo:base/Float";
-import Binary "./Binary";
+import NatX "./NatX";
   
   module {
     public type FloatPrecision = {#f16; #f32; #f64};
@@ -12,11 +12,6 @@ import Binary "./Binary";
         isNegative: Bool;
         exponent: Nat64;
         mantissa: Nat64;
-    };
-    type FloatBits = {
-        isNegative: Bool;
-        exponentBits: Nat64;
-        mantissaBits: Nat64;
     };
 
     public type PrecisionBitInfo = {
@@ -45,6 +40,94 @@ import Binary "./Binary";
         let bitInfo: FloatBitInfo = getBitInfo(precision);
         floatToFloatXInternal(f, bitInfo);
     };
+
+
+
+  public func encodeFloatX(buffer: Buffer<Nat8>, value: FloatX.FloatX, precision: {#f16; #f32; #f64}, encoding: {#lsb; #msb}) : Nat {
+      let bitInfo: FloatBitInfo = FloatX.getPrecisionInfo(precision);
+      let bits: Nat64 = switch(precision) {
+        case (#f16) {
+
+        };
+      }
+  };
+
+  public func encodeFloatX(f: FloatX) : [Nat8] {
+      encodeFloatInternal(f.isNegative, f.exponentBits, f.mantissaBits, bitInfo);
+  };
+
+
+
+
+
+  public func decodeFloat(bytes: [Nat8]) : ?Float {
+      switch(decodeFloatX(bytes)) {
+          case (?fX) {
+              let bitInfo = getBitInfo(fX.precision);
+              ?floatXToFloatInternal(fX.isNegative, fX.exponentBits, fX.mantissaBits, bitInfo);
+          };
+          case (x) null;
+      };
+  };
+
+  public func decodeFloatX(bytes: [Nat8]) : ?(FloatX, FloatPrecision) {
+      var bits: Nat64 = NatX.decodeNat64(Iter.fromArray(bytes), #msb);
+      let bitInfo: FloatBitInfo = switch(bytes.size()) {
+          case (2) float16BitInfo;
+          case (4) float32BitInfo;
+          case (8) float64BitInfo;
+          case (a) return null; 
+      };
+      let (exponentBitLength: Nat64, mantissaBitLength: Nat64) = (bitInfo.exponentBitLength, bitInfo.mantissaBitLength);
+      // Bitshift to get mantissa, exponent and sign bits
+      let mantissaBits: Nat64 = bits & (Nat64.pow(2, mantissaBitLength) - 1);
+      let exponentBits: Nat64 = (bits >> mantissaBitLength) & (Nat64.pow(2, exponentBitLength) - 1);
+      let signBits: Nat64 = (bits >> (mantissaBitLength + exponentBitLength)) & 0x01;
+      
+      // Make negative if sign bit is 1
+      let isNegative: Bool = signBits == 1;
+      let precision = switch(bytes.size()) {
+          case (2) #f16;
+          case (4) #f32;
+          case (8) #f64;
+          case (a) return null;
+      };
+      ?{
+          precision = precision;
+          isNegative = isNegative;
+          exponentBits = exponentBits;
+          mantissaBits = mantissaBits;
+      }
+  };
+
+
+
+
+  private func encodeFloatInternal(isNegative: Bool, exponentBits: Nat64, mantissaBits: Nat64, bitInfo: FloatBitInfo) : [Nat8] {
+      var bits: Nat64 = 0;
+      if(isNegative) {
+          bits |= 0x01;
+      };
+      bits <<= bitInfo.exponentBitLength;
+      bits |= exponentBits;
+      bits <<= bitInfo.mantissaBitLength;
+      bits |= mantissaBits;
+
+      switch (bitInfo.precision) {
+          case (#f16) {
+              let nat16 = NatX.from64to16(bits);
+              NatX.encodeNat16(nat16, #msb);
+          };
+          case (#f32) {
+              let nat32 = NatX.from64To32(bits);
+              NatX.encodeNat32(nat32, #msb);
+          };
+          case (#f64) {
+              NatX.encodeNat64(bits, #msb);
+          };
+      }
+  };
+
 
 
     private func floatXToFloatInternal(isNegative: Bool, exponentBits: Nat64, mantissaBits: Nat64, bitInfo: FloatBitInfo) : Float {

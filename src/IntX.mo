@@ -105,7 +105,7 @@ module {
       let byteOffset: Nat64 = switch (encoding) {
         case (#lsb) i;
         case (#msb) byteLength - i;
-      }
+      };
       let byte: Nat8 = Nat8.fromNat(Nat64.toNat(Int64.toNat64(value >> byteOffset)));
       buffer.add(byte);
     };

@@ -14,20 +14,21 @@ module {
     };
 
     func testFloat(bytes: [Nat8], expected: Float) {
-        let actualFX = FloatX.decodeFloatX(bytes);
         let precision = switch(bytes.size()) {
             case (2) #f16;
             case (4) #f32;
             case (8) #f64;
             case (a) Debug.trap("Invalid byte size: " # debug_show(bytes.size()));
         };
+        let actualFX = FloatX.decodeFloatX(bytes, precision, #msb);
         let expectedFX = FloatX.floatToFloatX(expected, precision);
         switch(actualFX){
             case (null) Debug.trap("Invalid bytes for float: " # debug_show(bytes));
             case (?v){
                 if(v != expectedFX){
-                    Debug.trap("Invalid value. Expected: " # debug_show(expected) # ", Actual: " # debug_show(v) # ", Bytes: " # debug_show(bytes));
+                    Debug.trap("Invalid value. Expected: " # debug_show(expectedFX) # "(" # debug_show(expected) # "), Actual: " # debug_show(v) # ", Bytes: " # debug_show(bytes));
                 };
+                FloatX.floatXToFloat()
             }
         }
     };

@@ -5,6 +5,7 @@ import Debug "mo:base/Debug";
 import Float "mo:base/Float";
 import FloatX "../src/FloatX";
 import Nat8 "mo:base/Nat8";
+import TestUtil "./TestUtil";
 
 
 module {
@@ -42,40 +43,15 @@ module {
             case (null) Debug.trap("Invalid bytes for float: " # debug_show(bytes));
             case (?v){
                 if(v != expectedFX) {
-                    Debug.trap("Invalid value.\nExpected: " # debug_show(expectedFX) # "\nActual:   " # debug_show(v) # "\nExpected Value: " # Float.format(#exact, expected) # "\nBytes: " # toHexString(bytes));
+                    Debug.trap("Invalid value.\nExpected: " # debug_show(expectedFX) # "\nActual:   " # debug_show(v) # "\nExpected Value: " # Float.format(#exact, expected) # "\nBytes: " # TestUtil.toHexString(bytes));
                 };
                 let actualFloat: Float = FloatX.floatXToFloat(v);
                 // TODO shouldnt they be exact?
                 if(Float.abs(actualFloat - expected) > 0.00000001) {
-                    Debug.trap("Invalid value.\nExpected: " # Float.format(#exact, expected) # "\nActual:   " # Float.format(#exact, actualFloat) # "\nBytes: " # toHexString(bytes));
+                    Debug.trap("Invalid value.\nExpected: " # Float.format(#exact, expected) # "\nActual:   " # Float.format(#exact, actualFloat) # "\nBytes: " # TestUtil.toHexString(bytes));
                 }
             }
         }
-    };
-
-
-    public func toHexString(array : [Nat8]) : Text {
-        Array.foldLeft<Nat8, Text>(array, "", func (accum, w8) {
-            var pre = "";
-            if(accum != ""){
-                pre #= ", ";
-            };
-            accum # pre # encodeW8(w8);
-        });
-    };
-    private let base : Nat8 = 0x10; 
-
-    private let symbols = [
-        '0', '1', '2', '3', '4', '5', '6', '7',
-        '8', '9', 'A', 'B', 'C', 'D', 'E', 'F',
-    ];
-    /**
-    * Encode an unsigned 8-bit integer in hexadecimal format.
-    */
-    private func encodeW8(w8 : Nat8) : Text {
-        let c1 = symbols[Nat8.toNat(w8 / base)];
-        let c2 = symbols[Nat8.toNat(w8 % base)];
-        "0x" # Char.toText(c1) # Char.toText(c2);
     };
 
 }

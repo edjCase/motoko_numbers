@@ -139,9 +139,10 @@ module {
   };
 
 
-  // public func decodeNat(bytes: Iter.Iter<Nat8>, encoding: {#leb128}) : Result.Result<Nat, {}> {
-  //   // TODO
-  // };
+  public func decodeNat(bytes: Iter.Iter<Nat8>, encoding: {#leb128}) : ?Nat {
+    // TODO
+    null;
+  };
 
   public func decodeNat8(bytes: Iter.Iter<Nat8>, encoding: {#lsb; #msb}) : ?Nat8 {
     bytes.next();
@@ -164,8 +165,6 @@ module {
   public func decodeNat64(bytes: Iter.Iter<Nat8>, encoding: {#lsb; #msb}) : ?Nat64 {
     decodeNatX(bytes, encoding, #b64);
   };
-
-
 
 
 

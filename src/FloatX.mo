@@ -51,9 +51,10 @@ import NatX "./NatX";
         // If smaller than 2^minExponent then x is 0
         // e is 2^exponent + (number less than 1)
         // exponent is min value
-        (null, 0);
+        var a = null; // TODO bug where this cant be a const
+        (a, 0);
       };
-      
+
       // m = (|float|/2^exponent) - x
       // mantissa = m * maxMantissa
       // The m is the % of the exponent as the remainder between exponent and real value

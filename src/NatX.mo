@@ -1,14 +1,16 @@
 import Buffer "mo:base/Buffer";
+import Debug "mo:base/Debug";
+import Float "mo:base/Float";
+import Int64 "mo:base/Int64";
 import Iter "mo:base/Iter";
-import Result "mo:base/Result";
 import List "mo:base/List";
 import Nat "mo:base/Nat";
-import Nat8 "mo:base/Nat8";
 import Nat16 "mo:base/Nat16";
 import Nat32 "mo:base/Nat32";
 import Nat64 "mo:base/Nat64";
-import Int64 "mo:base/Int64";
-import Float "mo:base/Float";
+import Nat8 "mo:base/Nat8";
+import Result "mo:base/Result";
+import TestUtil "../test/TestUtil";
 
 module {
   public func from64To8(value: Nat64) : Nat8 {
@@ -79,10 +81,10 @@ module {
   };
 
 
-  public func encodeNat(buffer: Buffer.Buffer<Nat8>, value: Nat, encoding: {#leb128}) : Nat {
+  public func encodeNat(buffer: Buffer.Buffer<Nat8>, value: Nat, encoding: {#unsignedLEB128}) : Nat {
     let initialLength = buffer.size();
     switch(encoding) {
-      case (#leb128) {
+      case (#unsignedLEB128) {
         // Unsigned LEB128 - https://en.wikipedia.org/wiki/LEB128#Unsigned_LEB128
         //       10011000011101100101  In raw binary
         //      010011000011101100101  Padded to a multiple of 7 bits
@@ -139,7 +141,7 @@ module {
   };
 
 
-  public func decodeNat(bytes: Iter.Iter<Nat8>, encoding: {#leb128}) : ?Nat {
+  public func decodeNat(bytes: Iter.Iter<Nat8>, encoding: {#unsignedLEB128}) : ?Nat {
     // TODO
     null;
   };
@@ -169,17 +171,20 @@ module {
 
 
   private func decodeNatX(bytes: Iter.Iter<Nat8>, encoding: {#lsb; #msb}, size: {#b16; #b32; #b64}) : ?Nat64 {
-    let byteLength: Nat64 = getByteLength(size);
-    var nat64 : Nat64 = 0;
-    let lastIndex : Nat64 = byteLength - 1;
-    for (i in Iter.range(0, Nat64.toNat(byteLength) - 1)) {
-      let mask: Nat64 = switch(bytes.next()) {
-        case (null) return null; // Unexpected end of bytes
-        case (?b) from8To64(b) << ((lastIndex - Nat64.fromNat(i)) * 8);
+    do ? {
+      let byteLength: Nat64 = getByteLength(size);
+      var nat64 : Nat64 = 0;
+      let lastIndex : Nat64 = byteLength - 1;
+      for (i in Iter.range(0, Nat64.toNat(byteLength) - 1)) {
+        let b = from8To64(bytes.next()!);
+        let byteOffset: Nat64 = switch (encoding) {
+          case (#lsb) Nat64.fromNat(i);
+          case (#msb) Nat64.fromNat(Nat64.toNat(byteLength-1) - i);
+        };
+        nat64 |= b << (byteOffset * 8);
       };
-      nat64 |= mask;
-    };
-    ?nat64;
+      nat64;
+    }
   };
 
   private func encodeNatX(buffer: Buffer.Buffer<Nat8>, value: Nat64, encoding: {#lsb; #msb}, size: {#b16; #b32; #b64}) {
@@ -187,9 +192,9 @@ module {
     for (i in Iter.range(0, Nat64.toNat(byteLength) - 1)) {
       let byteOffset: Nat64 = switch (encoding) {
         case (#lsb) Nat64.fromNat(i);
-        case (#msb) Nat64.fromNat(Nat64.toNat(byteLength) - i);
+        case (#msb) Nat64.fromNat(Nat64.toNat(byteLength-1) - i);
       };
-      let byte: Nat8 = Nat8.fromNat(Nat64.toNat(value >> byteOffset));
+      let byte: Nat8 = from64To8((value >> (byteOffset * 8)) & 0xff);
       buffer.add(byte);
     };
   };

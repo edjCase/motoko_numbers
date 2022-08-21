@@ -25,9 +25,32 @@ module {
 
         testNat16([0x00, 0x00], 0);
         testNat16([0x00, 0x01], 1);
-        testNat16([0x01, 0x00], 0);
         testNat16([0x00, 0xff], 255);
-        testNat16([0xff, 0xff], 0);
+        testNat16([0x01, 0x00], 256);
+        testNat16([0xff, 0xff], 65535);
+
+
+        testNat32([0x00, 0x00, 0x00, 0x00], 0);
+        testNat32([0x00, 0x00, 0x00, 0x01], 1);
+        testNat32([0x00, 0x00, 0x00, 0xff], 255);
+        testNat32([0x00, 0x00, 0x01, 0x00], 256);
+        testNat32([0x00, 0x00, 0xff, 0xff], 65535);
+        testNat32([0xff, 0xff, 0xff, 0xff], 4294967295);
+
+
+        testNat64([0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00], 0);
+        testNat64([0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01], 1);
+        testNat64([0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff], 255);
+        testNat64([0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00], 256);
+        testNat64([0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff], 65535);
+        testNat64([0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff], 4294967295);
+        testNat64([0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff], 18446744073709551615);
+
+        testNat([0x00], 0, #unsignedLEB128);
+        testNat([0x01], 1, #unsignedLEB128);
+        testNat([0x7f], 127, #unsignedLEB128);
+        testNat([0xe5, 0x8e, 0x26], 624485, #unsignedLEB128);
+         
     };
 
     private func testNat8(bytes: [Nat8], expected: Nat8) {
@@ -42,8 +65,9 @@ module {
     private func testNat64(bytes: [Nat8], expected: Nat64) {
         testNatX(NatX.decodeNat64, NatX.encodeNat64, Nat64.equal, Nat64.toText, bytes, expected);
     };
-    private func testNat(bytes: [Nat8], expected: Nat) {
-        let actual: ?Nat = NatX.decodeNat(Iter.fromArray(bytes), #leb128);
+
+    private func testNat(bytes: [Nat8], expected: Nat, encoding: {#unsignedLEB128}) {
+        let actual: ?Nat = NatX.decodeNat(Iter.fromArray(bytes), encoding);
         switch (actual) {
             case (null) Debug.trap("Unable to parse nat from bytes: " # TestUtil.toHexString(bytes));
             case (?a) {
@@ -51,7 +75,7 @@ module {
                     Debug.trap("Expected: " # Nat.toText(expected) # "\nActual: " # Nat.toText(a) # "\nBytes: " # TestUtil.toHexString(bytes));
                 };
                 let buffer = Buffer.Buffer<Nat8>(bytes.size());
-                let _ = NatX.encodeNat(buffer, expected, #leb128);
+                let _ = NatX.encodeNat(buffer, expected, encoding);
                 let expectedBytes: [Nat8] = buffer.toArray();
                 if (not TestUtil.bytesAreEqual(bytes, expectedBytes)){
                     Debug.trap("Expected Bytes: " # TestUtil.toHexString(expectedBytes) # "\nActual Bytes: " # TestUtil.toHexString(bytes));

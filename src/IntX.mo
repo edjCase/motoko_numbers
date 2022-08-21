@@ -81,7 +81,7 @@ module {
 
 
 
-  public func encodeInt(buffer: Buffer.Buffer<Nat8>, value: Int, encoding: {#lsb; #msb}) : Nat {
+  public func encodeInt(buffer: Buffer.Buffer<Nat8>, value: Int, encoding: {#signedLEB128}) : Nat {
     // TODO
     0;
   };

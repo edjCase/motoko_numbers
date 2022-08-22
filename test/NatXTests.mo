@@ -71,7 +71,7 @@ module {
         switch (actual) {
             case (null) Debug.trap("Unable to parse nat from bytes: " # TestUtil.toHexString(bytes));
             case (?a) {
-                if(a == expected) {
+                if(a != expected) {
                     Debug.trap("Expected: " # Nat.toText(expected) # "\nActual: " # Nat.toText(a) # "\nBytes: " # TestUtil.toHexString(bytes));
                 };
                 let buffer = Buffer.Buffer<Nat8>(bytes.size());

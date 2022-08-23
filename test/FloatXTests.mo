@@ -6,6 +6,7 @@ import Float "mo:base/Float";
 import FloatX "../src/FloatX";
 import Nat8 "mo:base/Nat8";
 import TestUtil "./TestUtil";
+import Util "../src/Util";
 
 
 module {
@@ -43,12 +44,12 @@ module {
             case (null) Debug.trap("Invalid bytes for float: " # debug_show(bytes));
             case (?v){
                 if(v != expectedFX) {
-                    Debug.trap("Invalid value.\nExpected: " # debug_show(expectedFX) # "\nActual:   " # debug_show(v) # "\nExpected Value: " # Float.format(#exact, expected) # "\nBytes: " # TestUtil.toHexString(bytes));
+                    Debug.trap("Invalid value.\nExpected: " # debug_show(expectedFX) # "\nActual:   " # debug_show(v) # "\nExpected Value: " # Float.format(#exact, expected) # "\nBytes: " # Util.toHexString(bytes));
                 };
                 let actualFloat: Float = FloatX.floatXToFloat(v);
                 // TODO shouldnt they be exact?
                 if(Float.abs(actualFloat - expected) > 0.00000001) {
-                    Debug.trap("Invalid value.\nExpected: " # Float.format(#exact, expected) # "\nActual:   " # Float.format(#exact, actualFloat) # "\nBytes: " # TestUtil.toHexString(bytes));
+                    Debug.trap("Invalid value.\nExpected: " # Float.format(#exact, expected) # "\nActual:   " # Float.format(#exact, actualFloat) # "\nBytes: " # Util.toHexString(bytes));
                 }
             }
         }

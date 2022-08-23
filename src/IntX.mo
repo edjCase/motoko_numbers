@@ -96,35 +96,16 @@ module {
         };
         // Signed LEB128 - https://en.wikipedia.org/wiki/LEB128#Signed_LEB128
         //         11110001001000000  Binary encoding of 123456
-        //     00001_11100010_01000000  As a 21-bit number (multiple of 7)
-        //     11110_00011101_10111111  Negating all bits (one's complement)
-        //     11110_00011101_11000000  Adding one (two's complement) (Binary encoding of signed -123456)
+        //   00001_11100010_01000000  As a 21-bit number (multiple of 7)
+        //   11110_00011101_10111111  Negating all bits (one's complement)
+        //   11110_00011101_11000000  Adding one (two's complement) (Binary encoding of signed -123456)
         // 1111000  0111011  1000000  Split into 7-bit groups
         //01111000 10111011 11000000  Add high 1 bits on all but last (most significant) group to form bytes
         let positiveValue = Int.abs(value);
-        var bits: [Bool] = Util.natToLeastSignificantBits(positiveValue, 7);
+        var bits: [Bool] = Util.natToLeastSignificantBits(positiveValue, 7, true);
         if (value < 0) {
           // If negative, then get twos compliment
-
-          // Ones compliment, flip all bits
-          bits := Array.map(bits, func(b: Bool): Bool { not b });
-          
-          // Twos compliment, add 1
-          let lastIndex: Nat = bits.size() - 1;
-          let varBits: [var Bool] = Array.thaw(bits);
-          label l for (i in Iter.revRange(0, lastIndex)) {
-            let n: Nat = Int.abs(i);
-            let v = bits[n];
-            if (not v) {
-              // If the value is 0, flip to 1 and end
-              varBits[n] := true;
-              break l;
-            } else {
-              // If last value is 1, carry the one till the first 0
-              varBits[n] := false;
-            };
-          };
-          bits := Array.freeze(varBits);
+          bits := Util.twosCompliment(bits);
         };
         Util.invariableLengthBytesEncode(buffer, bits);
       };
@@ -149,22 +130,31 @@ module {
   };
 
 
-  public func decodeInt(bytes: Iter.Iter<Nat8>, encoding: {#signedLEB128}) : ?Nat {
+  public func decodeInt(bytes: Iter.Iter<Nat8>, encoding: {#signedLEB128}) : ?Int {
     do ? {
       switch(encoding){
         case (#signedLEB128) {
-          var v: Nat = 0;
-          var i: Nat = 0;
-          label l loop {
-            let byte: Nat8 = bytes.next()!;
-            v += Nat8.toNat(byte & 0x7f) * Nat.pow(2, 7 * i); // Shift over 7 * i bits to get value to add, ignore first bit
-            i += 1;
-            let hasNextByte = (byte & 0x80) == 0x80; // If starts with a 1, there is another byte
-            if (not hasNextByte) {
-              break l;
-            };
+          var bits: [Bool] = Util.invariableLengthBytesDecode(bytes);
+          let isNegative = bits[bits.size() - 1];
+          if (isNegative) {
+            // Reverse twos compliment
+            bits := Util.reverseTwosCompliment(bits);
           };
-          v
+          var i = 0;
+          let int = Array.foldLeft<Bool, Int>(bits, 0, func (accum: Int, bit: Bool) {
+            let newAccum = if (bit) {
+              accum + Nat.pow(2, i); // Shift over 7 * i bits to get value to add, ignore first bit
+            } else {
+              accum;
+            };
+            i += 1;
+            newAccum;
+          });
+          if (isNegative){
+            int * -1
+          } else {
+            int
+          };
         };
       };
     };
@@ -172,32 +162,35 @@ module {
 
   public func decodeInt8(bytes: Iter.Iter<Nat8>, encoding: {#lsb; #msb}) : ?Int8 {
     do ? { 
-      let value: Int64 = decodeIntX(bytes, encoding, #b8)!;
-      from64To8(value);
+      let bits: [Bool] = decodeIntX(bytes, encoding, #b8)!;
+      bitsToInt<Int8>(bits, 0, Int8.bitset);
     };
   };
 
   public func decodeInt16(bytes: Iter.Iter<Nat8>, encoding: {#lsb; #msb}) : ?Int16 {
     do ? { 
-      let value: Int64 = decodeIntX(bytes, encoding, #b16)!;
-      from64To16(value);
+      let bits: [Bool] = decodeIntX(bytes, encoding, #b16)!;
+      bitsToInt<Int16>(bits, 0, Int16.bitset);
     };
   };
 
   public func decodeInt32(bytes: Iter.Iter<Nat8>, encoding: {#lsb; #msb}) : ?Int32 {
     do ? { 
-      let value: Int64 = decodeIntX(bytes, encoding, #b32)!;
-      from64To32(value);
+      let bits: [Bool] = decodeIntX(bytes, encoding, #b32)!;
+      bitsToInt<Int32>(bits, 0, Int32.bitset);
     };
   };
 
   public func decodeInt64(bytes: Iter.Iter<Nat8>, encoding: {#lsb; #msb}) : ?Int64 {
-    decodeIntX(bytes, encoding, #b64);
+    do ? { 
+      let bits: [Bool] = decodeIntX(bytes, encoding, #b64)!;
+      bitsToInt<Int64>(bits, 0, Int64.bitset);
+    }
   };
 
 
 
-  private func decodeIntX(bytes: Iter.Iter<Nat8>, encoding: {#lsb; #msb}, size: {#b8; #b16; #b32; #b64}) : ?Int64 {
+  private func decodeIntX(bytes: Iter.Iter<Nat8>, encoding: {#lsb; #msb}, size: {#b8; #b16; #b32; #b64}) : ?[Bool] {
     do ? {
       let byteLength: Nat64 = getByteLength(size);
       var nat64 : Nat64 = 0;
@@ -210,20 +203,23 @@ module {
         };
         nat64 |= NatX.from8To64(b) << (byteOffset * 8);
       };
-      let msb: Nat = Nat64.toNat(byteLength) * 8 - 1; // Most sigificant (sign) bit
-      let isNegative = Nat64.bittest(nat64, msb); // Check sign bit
-      nat64 := Nat64.bitclear(nat64, msb); // Remove sign bit
-      let int64 = Int64.fromNat64(nat64);
-      dfsdf
-      Debug.print(debug_show(isNegative));
-      Debug.print(debug_show(nat64));
-      Debug.print(debug_show(int64));
-      if(isNegative) {
-        int64 * -1;
-      } else {
-        int64;
-      };
+      // Convert to bits in LSB order
+      var bits: [Bool] = Array.tabulate<Bool>(Nat64.toNat(byteLength * 8), func(i: Nat) { Nat64.bittest(nat64, i) });
+      bits
     }
+  };
+
+  private func bitsToInt<T>(bits: [Bool], initial: T, bitset: (T, Nat) -> T) : T {
+      var bitOffset = 0;
+      Array.foldLeft<Bool, T>(bits, initial, func (accum: T, x: Bool) {
+        let newAccum: T = if (not x) {
+          accum; // Dont set if 0
+        } else {
+          bitset(accum, bitOffset); // Set if 1
+        };
+        bitOffset += 1;
+        newAccum;
+      });
   };
 
   private func getByteLength(size: {#b8; #b16; #b32; #b64}) : Nat64 {
@@ -239,12 +235,12 @@ module {
   private func encodeIntX(buffer: Buffer.Buffer<Nat8>, value: Int64, encoding: {#lsb; #msb}, size: {#b16; #b32; #b64}) {
     let byteLength: Nat64 = getByteLength(size);
     for (i in Iter.range(0, Nat64.toNat(byteLength) - 1)) {
-      let byteOffset: Nat64 = switch (encoding) {
-        case (#lsb) Nat64.fromNat(i);
-        case (#msb) Nat64.fromNat(Nat64.toNat(byteLength) - i);
+      let byteOffset: Int64 = switch (encoding) {
+        case (#lsb) Int64.fromInt(i);
+        case (#msb) Int64.fromInt(Nat64.toNat(byteLength - 1) - i);
       };
-      let byte: Nat8 = Nat8.fromNat(Nat64.toNat(Int64.toNat64(value >> Int64.fromNat64(byteOffset))));
-      buffer.add(byte);
+      let byte: Int64 = (value >> (byteOffset * 8)) & 0xff;
+      buffer.add(Nat8.fromNat(Int.abs(Int64.toInt(byte))));
     };
   };
 

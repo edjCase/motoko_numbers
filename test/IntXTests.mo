@@ -13,6 +13,7 @@ import Int64 "mo:base/Int64";
 import Int "mo:base/Int";
 import IntX "../src/IntX";
 import TestUtil "./TestUtil";
+import Util "../src/Util";
 
 
 module {
@@ -21,15 +22,17 @@ module {
         testInt8([0x00], 0);
         testInt8([0x01], 1);
         testInt8([0x7f], 127);
-        testInt8([0xff], -128);
+        testInt8([0xff], -1);
+        testInt8([0x80], -128);
 
 
         testInt16([0x00, 0x00], 0);
         testInt16([0x00, 0x01], 1);
-        testInt16([0x00, 0xff], -128);
-        testInt16([0x01, 0x00], -129);
-        testInt16([0x7f, 0xff], 5535);
-        testInt16([0xff, 0xff], -5535);
+        testInt16([0x00, 0xff], 255);
+        testInt16([0x01, 0x00], 256);
+        testInt16([0x7f, 0xff], 32767);
+        testInt16([0xff, 0xff], -1);
+        testInt16([0x80, 0x00], -32768);
 
 
         testInt32([0x00, 0x00, 0x00, 0x00], 0);
@@ -37,8 +40,9 @@ module {
         testInt32([0x00, 0x00, 0x00, 0xff], 255);
         testInt32([0x00, 0x00, 0x01, 0x00], 256);
         testInt32([0x00, 0x00, 0xff, 0xff], 65535);
-        testInt32([0x7f, 0xff, 0xff, 0xff], -294967295);
-        testInt32([0xff, 0xff, 0xff, 0xff], 294967295);
+        testInt32([0x7f, 0xff, 0xff, 0xff], 2147483647);
+        testInt32([0x80, 0x00, 0x00, 0x00], -2147483648);
+        testInt32([0xff, 0xff, 0xff, 0xff], -1);
 
 
         testInt64([0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00], 0);
@@ -47,8 +51,9 @@ module {
         testInt64([0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00], 256);
         testInt64([0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff], 65535);
         testInt64([0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff], 4294967295);
-        testInt64([0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff], -8446744073709551615);
-        testInt64([0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff], 8446744073709551615);
+        testInt64([0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff], 9223372036854775807);
+        testInt64([0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00], -9223372036854775808);
+        testInt64([0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff], -1);
 
         testInt([0xc0, 0xbb, 0x78], -123456, #signedLEB128);
         testInt([0xbc, 0x7f], -68, #signedLEB128);
@@ -77,16 +82,16 @@ module {
     private func testInt(bytes: [Nat8], expected: Int, encoding: {#signedLEB128}) {
         let actual: ?Int = IntX.decodeInt(Iter.fromArray(bytes), encoding);
         switch (actual) {
-            case (null) Debug.trap("Unable to parse Int from bytes: " # TestUtil.toHexString(bytes));
+            case (null) Debug.trap("Unable to parse Int from bytes: " # Util.toHexString(bytes));
             case (?a) {
-                if(a == expected) {
-                    Debug.trap("Expected: " # Int.toText(expected) # "\nActual: " # Int.toText(a) # "\nBytes: " # TestUtil.toHexString(bytes));
+                if(a != expected) {
+                    Debug.trap("Expected: " # Int.toText(expected) # "\nActual: " # Int.toText(a) # "\nBytes: " # Util.toHexString(bytes));
                 };
                 let buffer = Buffer.Buffer<Nat8>(bytes.size());
                 let _ = IntX.encodeInt(buffer, expected, encoding);
                 let expectedBytes: [Nat8] = buffer.toArray();
                 if (not TestUtil.bytesAreEqual(bytes, expectedBytes)){
-                    Debug.trap("Expected Bytes: " # TestUtil.toHexString(expectedBytes) # "\nActual Bytes: " # TestUtil.toHexString(bytes));
+                    Debug.trap("Expected Bytes: " # Util.toHexString(expectedBytes) # "\nActual Bytes: " # Util.toHexString(bytes));
                 };
             };
         }
@@ -121,16 +126,16 @@ module {
     ) {
         let actual: ?T = decode(Iter.fromArray(bytes), encoding);
         switch (actual) {
-            case (null) Debug.trap("Unable to parse Int from bytes: " # TestUtil.toHexString(bytes));
+            case (null) Debug.trap("Unable to parse Int from bytes: " # Util.toHexString(bytes));
             case (?a) {
                 if(not equal(a, expected)) {
-                    Debug.trap("Expected: " # toText(expected) # "\nActual: " # toText(a) # "\nBytes: " # TestUtil.toHexString(bytes));
+                    Debug.trap("Expected: " # toText(expected) # "\nActual: " # toText(a) # "\nBytes: " # Util.toHexString(bytes));
                 };
                 let buffer = Buffer.Buffer<Nat8>(bytes.size());
                 encode(buffer, expected, encoding);
                 let expectedBytes: [Nat8] = buffer.toArray();
                 if (not TestUtil.bytesAreEqual(bytes, expectedBytes)){
-                    Debug.trap("Expected Bytes: " # TestUtil.toHexString(expectedBytes) # "\nActual Bytes: " # TestUtil.toHexString(bytes));
+                    Debug.trap("Expected Bytes: " # Util.toHexString(expectedBytes) # "\nActual Bytes: " # Util.toHexString(bytes));
                 };
             };
         }

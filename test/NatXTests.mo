@@ -13,6 +13,7 @@ import Nat64 "mo:base/Nat64";
 import Nat "mo:base/Nat";
 import NatX "../src/NatX";
 import TestUtil "./TestUtil";
+import Util "../src/Util";
 
 
 module {
@@ -69,16 +70,16 @@ module {
     private func testNat(bytes: [Nat8], expected: Nat, encoding: {#unsignedLEB128}) {
         let actual: ?Nat = NatX.decodeNat(Iter.fromArray(bytes), encoding);
         switch (actual) {
-            case (null) Debug.trap("Unable to parse nat from bytes: " # TestUtil.toHexString(bytes));
+            case (null) Debug.trap("Unable to parse nat from bytes: " # Util.toHexString(bytes));
             case (?a) {
                 if(a != expected) {
-                    Debug.trap("Expected: " # Nat.toText(expected) # "\nActual: " # Nat.toText(a) # "\nBytes: " # TestUtil.toHexString(bytes));
+                    Debug.trap("Expected: " # Nat.toText(expected) # "\nActual: " # Nat.toText(a) # "\nBytes: " # Util.toHexString(bytes));
                 };
                 let buffer = Buffer.Buffer<Nat8>(bytes.size());
                 let _ = NatX.encodeNat(buffer, expected, encoding);
                 let expectedBytes: [Nat8] = buffer.toArray();
                 if (not TestUtil.bytesAreEqual(bytes, expectedBytes)){
-                    Debug.trap("Expected Bytes: " # TestUtil.toHexString(expectedBytes) # "\nActual Bytes: " # TestUtil.toHexString(bytes));
+                    Debug.trap("Expected Bytes: " # Util.toHexString(expectedBytes) # "\nActual Bytes: " # Util.toHexString(bytes));
                 };
             };
         }
@@ -113,16 +114,16 @@ module {
     ) {
         let actual: ?T = decode(Iter.fromArray(bytes), encoding);
         switch (actual) {
-            case (null) Debug.trap("Unable to parse nat from bytes: " # TestUtil.toHexString(bytes));
+            case (null) Debug.trap("Unable to parse nat from bytes: " # Util.toHexString(bytes));
             case (?a) {
                 if(not equal(a, expected)) {
-                    Debug.trap("Expected: " # toText(expected) # "\nActual: " # toText(a) # "\nBytes: " # TestUtil.toHexString(bytes));
+                    Debug.trap("Expected: " # toText(expected) # "\nActual: " # toText(a) # "\nBytes: " # Util.toHexString(bytes));
                 };
                 let buffer = Buffer.Buffer<Nat8>(bytes.size());
                 encode(buffer, expected, encoding);
                 let expectedBytes: [Nat8] = buffer.toArray();
                 if (not TestUtil.bytesAreEqual(bytes, expectedBytes)){
-                    Debug.trap("Expected Bytes: " # TestUtil.toHexString(expectedBytes) # "\nActual Bytes: " # TestUtil.toHexString(bytes));
+                    Debug.trap("Expected Bytes: " # Util.toHexString(expectedBytes) # "\nActual Bytes: " # Util.toHexString(bytes));
                 };
             };
         }

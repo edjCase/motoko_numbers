@@ -95,31 +95,9 @@ module {
         //      010011000011101100101  Padded to a multiple of 7 bits
         //  0100110  0001110  1100101  Split into 7-bit groups
         // 00100110 10001110 11100101  Add high 1 bits on all but last (most significant) group to form bytes
-        let bits: [Bool] = Util.natToLeastSignificantBits(value, 7);
+        let bits: [Bool] = Util.natToLeastSignificantBits(value, 7, false);
         
-        let byteCount: Nat = (bits.size() / 7) + (if (bits.size() % 7 != 0) 1 else 0); // 7, not 8, the 8th bit is to indicate end of number
-        
-        let lebBytes = Buffer.Buffer<Nat8>(byteCount);
-        label f for (byteIndex in Iter.range(0, byteCount - 1))
-        {
-          var byte: Nat8 = 0;
-          for (bitOffset in Iter.range(0, 6)) {
-            let bit: Bool = bits[byteIndex * 7 + bitOffset];
-            if (bit) {
-                // Set bit
-                byte := Nat8.bitset(byte, bitOffset);
-            };
-          };
-          let hasMoreBits = bits.size() > (byteIndex + 1) * 7;
-          if (hasMoreBits)
-          {
-            // Have most left of byte be 1 if there is another byte
-            byte := Nat8.bitset(byte, 7);
-          };
-          lebBytes.add(byte);
-        };
-        
-        buffer.append(lebBytes);
+        Util.invariableLengthBytesEncode(buffer, bits);
       };
     };
     buffer.size() - initialLength;

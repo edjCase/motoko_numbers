@@ -76,7 +76,7 @@ module {
                     Debug.trap("Expected: " # Nat.toText(expected) # "\nActual: " # Nat.toText(a) # "\nBytes: " # Util.toHexString(bytes));
                 };
                 let buffer = Buffer.Buffer<Nat8>(bytes.size());
-                let _ = NatX.encodeNat(buffer, expected, encoding);
+                NatX.encodeNat(buffer, expected, encoding);
                 let expectedBytes: [Nat8] = buffer.toArray();
                 if (not TestUtil.bytesAreEqual(bytes, expectedBytes)){
                     Debug.trap("Expected Bytes: " # Util.toHexString(expectedBytes) # "\nActual Bytes: " # Util.toHexString(bytes));

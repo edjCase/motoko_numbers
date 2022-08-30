@@ -86,13 +86,12 @@ module {
 
 
 
-  public func encodeInt(buffer: Buffer.Buffer<Nat8>, value: Int, encoding: {#signedLEB128}) : Nat {
-    let initialLength = buffer.size();
+  public func encodeInt(buffer: Buffer.Buffer<Nat8>, value: Int, encoding: {#signedLEB128}) {
     switch(encoding) {
       case (#signedLEB128) {
         if (value == 0) {
           buffer.add(0);
-          return 0;
+          return;
         };
         // Signed LEB128 - https://en.wikipedia.org/wiki/LEB128#Signed_LEB128
         //         11110001001000000  Binary encoding of 123456
@@ -110,7 +109,6 @@ module {
         Util.invariableLengthBytesEncode(buffer, bits);
       };
     };
-    buffer.size() - initialLength;
   };
 
   public func encodeInt8(buffer: Buffer.Buffer<Nat8>, value: Int8) {

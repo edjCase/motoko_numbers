@@ -82,13 +82,12 @@ module {
   };
 
 
-  public func encodeNat(buffer: Buffer.Buffer<Nat8>, value: Nat, encoding: {#unsignedLEB128}) : Nat {
-    let initialLength = buffer.size();
+  public func encodeNat(buffer: Buffer.Buffer<Nat8>, value: Nat, encoding: {#unsignedLEB128}) {
     switch(encoding) {
       case (#unsignedLEB128) {
         if (value == 0) {
           buffer.add(0);
-          return 0;
+          return;
         };
         // Unsigned LEB128 - https://en.wikipedia.org/wiki/LEB128#Unsigned_LEB128
         //       10011000011101100101  In raw binary
@@ -100,7 +99,6 @@ module {
         Util.invariableLengthBytesEncode(buffer, bits);
       };
     };
-    buffer.size() - initialLength;
   };
 
   public func encodeNat8(buffer: Buffer.Buffer<Nat8>, value: Nat8) {

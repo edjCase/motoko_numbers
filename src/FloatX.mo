@@ -126,20 +126,19 @@ import NatX "./NatX";
   };
 
 
-  public func decodeFloat(bytes: [Nat8], encoding: {#lsb; #msb}) : ?Float {
+  public func decodeFloat(bytes: Iter.Iter<Nat8>, encoding: {#lsb; #msb}) : ?Float {
     do ? {
         let fX: FloatX = decodeFloatX(bytes, #f64, encoding)!;
         floatXToFloat(fX);
     };
   };
 
-  public func decodeFloatX(bytes: [Nat8], precision: {#f16; #f32; #f64}, encoding: {#lsb; #msb}) : ?FloatX {
+  public func decodeFloatX(bytes: Iter.Iter<Nat8>, precision: {#f16; #f32; #f64}, encoding: {#lsb; #msb}) : ?FloatX {
     do ? {
-      let bytesIter = Iter.fromArray(bytes);
       let bits: Nat64 = switch(precision) {
-        case (#f16) NatX.from16To64(NatX.decodeNat16(bytesIter, encoding)!);
-        case (#f32) NatX.from32To64(NatX.decodeNat32(bytesIter, encoding)!);
-        case (#f64) NatX.decodeNat64(bytesIter, encoding)!;
+        case (#f16) NatX.from16To64(NatX.decodeNat16(bytes, encoding)!);
+        case (#f32) NatX.from32To64(NatX.decodeNat32(bytes, encoding)!);
+        case (#f64) NatX.decodeNat64(bytes, encoding)!;
       };
       let bitInfo: PrecisionBitInfo = getPrecisionBitInfo(precision);
       if (bits == 0) {

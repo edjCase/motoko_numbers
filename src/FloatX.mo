@@ -11,6 +11,12 @@ import Nat64 "mo:base/Nat64";
 import NatX "./NatX";
   
   module {
+
+    public func nearlyEqual(a: Float, b: Float, relativeTolerance: Float, absoluteTolerance: Float): Bool {
+      let maxAbsoluteValue: Float = Float.max(Float.abs(a), Float.abs(b));
+      Float.abs(a-b) <= Float.max(relativeTolerance * maxAbsoluteValue, absoluteTolerance);
+	  };
+
     public type FloatPrecision = {#f16; #f32; #f64};
 
     public type FloatX = {

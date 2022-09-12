@@ -9,97 +9,95 @@ import Nat16 "mo:base/Nat16";
 import Nat32 "mo:base/Nat32";
 import Nat64 "mo:base/Nat64";
 import NatX "./NatX";
-  
-  module {
 
-    public func nearlyEqual(a: Float, b: Float, relativeTolerance: Float, absoluteTolerance: Float): Bool {
-      let maxAbsoluteValue: Float = Float.max(Float.abs(a), Float.abs(b));
-      Float.abs(a-b) <= Float.max(relativeTolerance * maxAbsoluteValue, absoluteTolerance);
-	  };
+module {
 
-    public type FloatPrecision = {#f16; #f32; #f64};
+  public type FloatPrecision = {#f16; #f32; #f64};
 
-    public type FloatX = {
-        precision: FloatPrecision;
-        isNegative: Bool;
-        exponent: ?Int;
-        mantissa: Nat;
-    };
+  public type FloatX = {
+      precision: FloatPrecision;
+      isNegative: Bool;
+      exponent: ?Int;
+      mantissa: Nat;
+  };
 
-    public func floatToFloatX(float: Float, precision: FloatPrecision) : FloatX {
-      let bitInfo: PrecisionBitInfo = getPrecisionBitInfo(precision);
-      if (float == 0.0) {
-        return {
-          precision = precision;
-          isNegative = false;
-          exponent = null;
-          mantissa = 0;
-        };
-      };
-      let isNegative = float < 0;
+  public func nearlyEqual(a: Float, b: Float, relativeTolerance: Float, absoluteTolerance: Float): Bool {
+    let maxAbsoluteValue: Float = Float.max(Float.abs(a), Float.abs(b));
+    Float.abs(a-b) <= Float.max(relativeTolerance * maxAbsoluteValue, absoluteTolerance);
+  };
 
-      // maxMantissa = 2 ^ mantissaBitLength
-      // e = 2^exponent * (x + mantissa/maxMantissa)
-      // float = sign * e
-      // where x is 1 if exponent > 0 else 0
-      // where sign is 1 if positive else -1
-
-      // Normal number are numbers that are represented by 2^minExponent -> 2^maxExponent - 1
-      // Sub normal numbers are numbers represented by 2^minExponent * 1/maxMantissa -> 2^minExponent * (maxMantissa - 1)/maxMantissa
-      let isNormalNumber: Bool = Float.abs(float) >= bitInfo.smallestNormalNumber;
-      let (exponent: ?Int, x: Int) = if (isNormalNumber) {
-        // If is normal number then x is 1
-        // e is 2^exponent + (number less than 2)
-        // so if you get the log2(e), truncate the remainder, it will represent the exponent
-        let e: Int = Float.toInt(Float.floor(Float.log(Float.abs(float))/Float.log(2)));
-        (?e, 1);
-      } else {
-        // If smaller than 2^minExponent then x is 0
-        // e is 2^exponent + (number less than 1)
-        // exponent is min value
-        var a = null; // TODO bug where this cant be a const
-        (a, 0);
-      };
-
-      // m = (|float|/2^exponent) - x
-      // mantissa = m * maxMantissa
-      // The m is the % of the exponent as the remainder between exponent and real value
-      let exp = switch (exponent) {
-        case (null) bitInfo.minExponent; // If null, its subnormal. use min exponent here
-        case (?e) e;
-      };
-      let m: Float = (Float.abs(float) / calculateExponent(2, Float.fromInt(exp)) - Float.fromInt(x));
-      // Mantissa represent how many offsets there are between the exponent and the value
-      let mantissa: Nat = Int.abs(Float.toInt(Float.nearest(m * Float.fromInt(bitInfo.maxMantissaDenomiator))));
-      
-      {
+  public func fromFloat(float: Float, precision: FloatPrecision) : FloatX {
+    let bitInfo: PrecisionBitInfo = getPrecisionBitInfo(precision);
+    if (float == 0.0) {
+      return {
         precision = precision;
-        isNegative = isNegative;
-        exponent = exponent;
-        mantissa = mantissa;
+        isNegative = false;
+        exponent = null;
+        mantissa = 0;
       };
     };
+    let isNegative = float < 0;
 
-    public func floatXToFloat(fX: FloatX) : Float {
-      let bitInfo: PrecisionBitInfo = getPrecisionBitInfo(fX.precision);
+    // maxMantissa = 2 ^ mantissaBitLength
+    // e = 2^exponent * (x + mantissa/maxMantissa)
+    // float = sign * e
+    // where x is 1 if exponent > 0 else 0
+    // where sign is 1 if positive else -1
 
-      // e = 2^exponent * (x + mantissa/maxMantissa)
-      // float = sign * e
-      // where x is 1 if exponent > 0 else 0
-      // where sign is 1 if positive else -1
+    // Normal number are numbers that are represented by 2^minExponent -> 2^maxExponent - 1
+    // Sub normal numbers are numbers represented by 2^minExponent * 1/maxMantissa -> 2^minExponent * (maxMantissa - 1)/maxMantissa
+    let isNormalNumber: Bool = Float.abs(float) >= bitInfo.smallestNormalNumber;
+    let (exponent: ?Int, x: Int) = if (isNormalNumber) {
+      // If is normal number then x is 1
+      // e is 2^exponent + (number less than 2)
+      // so if you get the log2(e), truncate the remainder, it will represent the exponent
+      let e: Int = Float.toInt(Float.floor(Float.log(Float.abs(float))/Float.log(2)));
+      (?e, 1);
+    } else {
+      // If smaller than 2^minExponent then x is 0
+      // e is 2^exponent + (number less than 1)
+      // exponent is min value
+      var a = null; // TODO bug where this cant be a const
+      (a, 0);
+    };
+
+    // m = (|float|/2^exponent) - x
+    // mantissa = m * maxMantissa
+    // The m is the % of the exponent as the remainder between exponent and real value
+    let exp = switch (exponent) {
+      case (null) bitInfo.minExponent; // If null, its subnormal. use min exponent here
+      case (?e) e;
+    };
+    let m: Float = (Float.abs(float) / calculateExponent(2, Float.fromInt(exp)) - Float.fromInt(x));
+    // Mantissa represent how many offsets there are between the exponent and the value
+    let mantissa: Nat = Int.abs(Float.toInt(Float.nearest(m * Float.fromInt(bitInfo.maxMantissaDenomiator))));
     
-      let sign = if (fX.isNegative) -1.0 else 1.0;
-      let (exponent: Int, x: Nat) = switch (fX.exponent) {
-        case (null) (-14, 0); // If null, its subnormal. use min exponent here
-        case (?exponent) (exponent, 1);
-      };
-      let expValue: Float = calculateExponent(2, Float.fromInt(exponent));
-      sign * expValue * (Float.fromInt(x) + Float.fromInt(fX.mantissa)/Float.fromInt(bitInfo.maxMantissaDenomiator));
+    {
+      precision = precision;
+      isNegative = isNegative;
+      exponent = exponent;
+      mantissa = mantissa;
     };
+  };
 
+  public func toFloat(fX: FloatX) : Float {
+    let bitInfo: PrecisionBitInfo = getPrecisionBitInfo(fX.precision);
 
+    // e = 2^exponent * (x + mantissa/maxMantissa)
+    // float = sign * e
+    // where x is 1 if exponent > 0 else 0
+    // where sign is 1 if positive else -1
+  
+    let sign = if (fX.isNegative) -1.0 else 1.0;
+    let (exponent: Int, x: Nat) = switch (fX.exponent) {
+      case (null) (-14, 0); // If null, its subnormal. use min exponent here
+      case (?exponent) (exponent, 1);
+    };
+    let expValue: Float = calculateExponent(2, Float.fromInt(exponent));
+    sign * expValue * (Float.fromInt(x) + Float.fromInt(fX.mantissa)/Float.fromInt(bitInfo.maxMantissaDenomiator));
+  };
 
-  public func encodeFloatX(buffer: Buffer.Buffer<Nat8>, value: FloatX, encoding: {#lsb; #msb}) {
+  public func encode(buffer: Buffer.Buffer<Nat8>, value: FloatX, encoding: {#lsb; #msb}) {
       var bits: Nat64 = 0;
       if(value.isNegative) {
           bits |= 0x01;
@@ -131,15 +129,7 @@ import NatX "./NatX";
       }
   };
 
-
-  public func decodeFloat(bytes: Iter.Iter<Nat8>, encoding: {#lsb; #msb}) : ?Float {
-    do ? {
-        let fX: FloatX = decodeFloatX(bytes, #f64, encoding)!;
-        floatXToFloat(fX);
-    };
-  };
-
-  public func decodeFloatX(bytes: Iter.Iter<Nat8>, precision: {#f16; #f32; #f64}, encoding: {#lsb; #msb}) : ?FloatX {
+  public func decode(bytes: Iter.Iter<Nat8>, precision: {#f16; #f32; #f64}, encoding: {#lsb; #msb}) : ?FloatX {
     do ? {
       let bits: Nat64 = switch(precision) {
         case (#f16) NatX.from16To64(NatX.decodeNat16(bytes, encoding)!);
@@ -220,4 +210,4 @@ import NatX "./NatX";
   };
 
 
-  }
+}

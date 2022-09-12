@@ -39,14 +39,14 @@ module {
             case (a) Debug.trap("Invalid byte size: " # debug_show(bytes.size()));
         };
         let actualFX = FloatX.decodeFloatX(bytes, precision, #msb);
-        let expectedFX = FloatX.floatToFloatX(expected, precision);
+        let expectedFX = FloatX.fromFloat(expected, precision);
         switch(actualFX){
             case (null) Debug.trap("Invalid bytes for float: " # debug_show(bytes));
             case (?v){
                 if(v != expectedFX) {
                     Debug.trap("Invalid value.\nExpected: " # debug_show(expectedFX) # "\nActual:   " # debug_show(v) # "\nExpected Value: " # Float.format(#exact, expected) # "\nBytes: " # Util.toHexString(bytes));
                 };
-                let actualFloat: Float = FloatX.floatXToFloat(v);
+                let actualFloat: Float = FloatX.toFloat(v);
                 // TODO shouldnt they be exact?
                 if(Float.abs(actualFloat - expected) > 0.00000001) {
                     Debug.trap("Invalid value.\nExpected: " # Float.format(#exact, expected) # "\nActual:   " # Float.format(#exact, actualFloat) # "\nBytes: " # Util.toHexString(bytes));

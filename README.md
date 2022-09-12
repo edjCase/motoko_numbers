@@ -24,8 +24,6 @@ Where `{{Version}}` should be replaced with the latest release from https://gith
 2. Add `xtendedNumbers` as a value in the dependencies list
 3. Run `./build.sh` which runs the vessel command to install the package
 
-# Usage
-
 # API
 
 ## FloatX

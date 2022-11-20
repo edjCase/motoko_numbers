@@ -1,12 +1,7 @@
 {
   "version": 1,
-  "dfx": "0.11.0",
-  "canisters": {
-    "sample": {
-      "type": "motoko",
-      "main": "samples/Sample.mo"
-    }
-  },
+  "dfx": "0.12.0",
+  "canisters": {},
   "defaults": {
     "build": {
       "packtool": "vessel sources",

@@ -21,15 +21,20 @@ Currently there is no official package but there is a manual process:
 1. Add the following to the `additions` list in the `package-set.dhall`
 
 ```
-{
-    name = "xtendedNumbers"
-    , version = "{{Version}}"
-    , repo = "https://github.com/gekctek/motoko_numbers"
-    , dependencies = [] : List Text
+{ name = "candid"
+, version = {{candidVersion}}"
+, repo = "https://github.com/gekctek/motoko_candid"
+, dependencies = ["xtendedNumbers"] : List Text
+},
+{ name = "xtendedNumbers"
+, version = "{{xtendedNumbersVersion}}"
+, repo = "https://github.com/gekctek/motoko_numbers"
+, dependencies = [] : List Text
 }
 ```
 
-Where `{{Version}}` should be replaced with the latest release from https://github.com/Gekctek/motoko_numbers/releases/
+Where `{{candidVersion}}` should be replaced with the latest release from https://github.com/Gekctek/motoko_candid/releases/
+Where `{{xtendedNumbersVersion}}` should be replaced with the latest release from https://github.com/Gekctek/motoko_numbers/releases/
 
 2. Add `xtendedNumbers` as a value in the dependencies list
 3. Run `./build.sh` which runs the vessel command to install the package

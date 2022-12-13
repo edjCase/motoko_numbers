@@ -14,6 +14,14 @@ This is a library that extends on the Motoko base library for numbers. Maily foc
 
 # Package
 
+### MOPS
+
+```
+mops install xtended-numbers
+```
+
+To setup MOPS package manage, follow the instructions from the [MOPS Site](https://j4mwm-bqaaa-aaaam-qajbq-cai.ic0.app/)
+
 ### Vessel
 
 Currently there is no official package but there is a manual process:

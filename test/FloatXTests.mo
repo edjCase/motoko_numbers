@@ -38,7 +38,7 @@ module {
             case (8) #f64;
             case (a) Debug.trap("Invalid byte size: " # debug_show(bytes.size()));
         };
-        let actualFX = FloatX.decodeFloatX(bytes, precision, #msb);
+        let actualFX = FloatX.decode(bytes.vals(), precision, #msb);
         let expectedFX = FloatX.fromFloat(expected, precision);
         switch(actualFX){
             case (null) Debug.trap("Invalid bytes for float: " # debug_show(bytes));

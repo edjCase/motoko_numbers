@@ -29,7 +29,7 @@ module {
         };
     };
     // Least Sigficant Bit first
-    buffer.toArray();
+    Buffer.toArray(buffer);
   };
 
   public func invariableLengthBytesEncode(buffer: Buffer.Buffer<Nat8>, bits: [Bool]) {
@@ -69,7 +69,7 @@ module {
             break f;
         };
     };
-    buffer.toArray();
+    Buffer.toArray(buffer);
   };
 
   public func twosCompliment(bits: [Bool]): [Bool] {

@@ -1,5 +1,5 @@
 [dependencies]
-base = "https://github.com/dfinity/motoko-base#aafcdee0c8328087aeed506e64aa2ff4ed329b47"
+base = "https://github.com/dfinity/motoko-base#moc-0.7.4"
 
 [package]
 name = "xtended-numbers"

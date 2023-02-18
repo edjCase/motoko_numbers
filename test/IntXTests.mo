@@ -60,6 +60,99 @@ module {
         testInt([0x80, 0x01], 128, #signedLEB128);
         testInt([0xe5, 0x8e, 0x26], 624485, #signedLEB128);
 
+        testToText(
+            0,
+            {
+                binary = "0";
+                decimal = "0";
+                hexadecimal = "0";
+            },
+        );
+
+        testToText(
+            1,
+            {
+                binary = "1";
+                decimal = "1";
+                hexadecimal = "1";
+            },
+        );
+        testToText(
+            -1,
+            {
+                binary = "-1";
+                decimal = "-1";
+                hexadecimal = "-1";
+            },
+        );
+        testToText(
+            9,
+            {
+                binary = "1001";
+                decimal = "9";
+                hexadecimal = "9";
+            },
+        );
+        testToText(
+            10,
+            {
+                binary = "1010";
+                decimal = "10";
+                hexadecimal = "A";
+            },
+        );
+        testToText(
+            100,
+            {
+                binary = "1100100";
+                decimal = "100";
+                hexadecimal = "64";
+            },
+        );
+        testToText(
+            1234567890,
+            {
+                binary = "1001001100101100000001011010010";
+                decimal = "1234567890";
+                hexadecimal = "499602D2";
+            },
+        );
+        testToText(
+            -1234567890,
+            {
+                binary = "-1001001100101100000001011010010";
+                decimal = "-1234567890";
+                hexadecimal = "-499602D2";
+            },
+        );
+        testToText(
+            123456789099999999999999999999999999999999999999999999999999999999999999,
+            {
+                binary = "100011110001101000100010011011111100001111111100000101010001010010001100000101010110000101011001100000101110110110110000100000101101111010011010101110010100110110111001100101011111111111111111111111111111111111111111111111111111111111111";
+                decimal = "123456789099999999999999999999999999999999999999999999999999999999999999";
+                hexadecimal = "11E3444DF87F82A29182AC2B305DB6105BD35729B732BFFFFFFFFFFFFFFF";
+            },
+        );
+    };
+
+    private func testToText(value : Int, expected : { binary : Text; decimal : Text; hexadecimal : Text }) {
+        testToTextInternal(value, expected.binary, #binary);
+        testToTextInternal(value, expected.decimal, #decimal);
+        testToTextInternal(value, expected.hexadecimal, #hexadecimal);
+    };
+
+    private func testToTextInternal(value : Int, expected : Text, base : IntX.Base) {
+        let actual = IntX.toTextAdvanced(value, base);
+        if (actual != expected) {
+            Debug.trap("Failed converting Int to Text.\n\nExpected:\n" # expected # "\n\nActual:\n" # actual);
+        };
+        let n = switch (IntX.fromTextAdvanced(actual, base, null)) {
+            case (null) Debug.trap("Failed to convert " # debug_show (value) # " to text.");
+            case (?n) n;
+        };
+        if (n != value) {
+            Debug.trap("Failed converting Text to Int.\n\nExpected:\n" # debug_show (value) # "\n\nActual:\n" # debug_show (n));
+        };
     };
 
     private func testInt8(bytes : [Nat8], expected : Int8) {

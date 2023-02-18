@@ -17,19 +17,31 @@ import Prelude "mo:base/Prelude";
 
 module {
 
-  public type FromTextResult = {
-    #ok : Nat;
-    #error : { #emptyText; #invalidChar : Char };
+  public type Base = { #binary; #decimal; #hexadecimal };
+
+  public func fromText(value : Text) : ?Nat {
+    fromTextAdvanced(value, #decimal, null);
   };
 
-  public func fromText(value : Text) : FromTextResult {
+  public func fromTextAdvanced(value : Text, base : Base, seperator : ?Char) : ?Nat {
     if (value == "") {
-      return #error(#emptyText);
+      return null;
+    };
+
+    let maxCharScalarValue = switch (base) {
+      case (#binary) 1;
+      case (#decimal) 9;
+      case (#hexadecimal) 15;
+    };
+    let baseScalar = switch (base) {
+      case (#binary) 2;
+      case (#decimal) 10;
+      case (#hexadecimal) 16;
     };
 
     var nat : Nat = 0;
-    for (c in value.chars()) {
-      let digit = switch (c) {
+    label f for (c in value.chars()) {
+      let charScalarValue = switch (c) {
         case ('0') 0;
         case ('1') 1;
         case ('2') 2;
@@ -40,24 +52,63 @@ module {
         case ('7') 7;
         case ('8') 8;
         case ('9') 9;
-        case (c) return #error(#invalidChar(c));
+
+        // TODO toLower?
+        case ('a') 10;
+        case ('A') 10;
+
+        case ('b') 11;
+        case ('B') 11;
+
+        case ('c') 12;
+        case ('C') 12;
+
+        case ('d') 13;
+        case ('D') 13;
+
+        case ('e') 14;
+        case ('E') 14;
+
+        case ('f') 15;
+        case ('F') 15;
+        case (c) {
+          if (?c == seperator) {
+            continue f; // Skip seperator
+          };
+          return null;
+        };
       };
-      // Shift digit over to left by 1 (multiple by 10)
+      if (charScalarValue > maxCharScalarValue) {
+        // Invalid character such as 'A' being in
+        return null;
+      };
+      // Shift scalar over to left by 1 (multiple by base)
       // then add current digit
-      nat := (nat * 10) + digit;
+      nat := (nat * baseScalar) + charScalarValue;
     };
-    #ok(nat);
+    ?nat;
   };
 
-  public func toText(n : Nat) : Text {
-    if (n == 0) {
+  public func toText(value : Nat) : Text {
+    toTextAdvanced(value, #decimal);
+  };
+
+  public func toTextAdvanced(value : Nat, base : Base) : Text {
+    if (value == 0) {
       return "0";
     };
+
+    let baseScalar = switch (base) {
+      case (#binary) 2;
+      case (#decimal) 10;
+      case (#hexadecimal) 16;
+    };
+
     var buffer = Buffer.Buffer<Char>(5);
-    var remainingValue = n;
+    var remainingValue = value;
     while (remainingValue > 0) {
-      let digit = remainingValue % 10; // Get last digit
-      let c = switch (digit) {
+      let charScalarValue = remainingValue % baseScalar; // Get last digit
+      let c = switch (charScalarValue) {
         case (0) '0';
         case (1) '1';
         case (2) '2';
@@ -68,10 +119,17 @@ module {
         case (7) '7';
         case (8) '8';
         case (9) '9';
+
+        case (10) 'A';
+        case (11) 'B';
+        case (12) 'C';
+        case (13) 'D';
+        case (14) 'E';
+        case (15) 'F';
         case (_) Prelude.unreachable();
       };
       buffer.add(c);
-      remainingValue := remainingValue / 10; // Remove last digit
+      remainingValue := remainingValue / baseScalar; // Remove last digit
     };
     Buffer.reverse(buffer); // Reverse because digits are from least to most significant
     Text.fromIter(buffer.vals());

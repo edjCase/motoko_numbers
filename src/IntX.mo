@@ -18,13 +18,13 @@ import Debug "mo:base/Debug";
 import Text "mo:base/Text";
 
 module {
-  public type Base = NatX.Base;
+  public type Format = NatX.Format;
 
   public func fromText(value : Text) : ?Int {
     fromTextAdvanced(value, #decimal, null);
   };
 
-  public func fromTextAdvanced(value : Text, base : Base, seperator : ?Char) : ?Int {
+  public func fromTextAdvanced(value : Text, format : Format, seperator : ?Char) : ?Int {
     do ? {
       let isNegative = Text.startsWith(value, #char('-'));
       let natTextValue = if (isNegative) {
@@ -35,7 +35,7 @@ module {
       } else {
         value; // No negative sign, use as is
       };
-      let natValue = NatX.fromTextAdvanced(natTextValue, base, seperator)!;
+      let natValue = NatX.fromTextAdvanced(natTextValue, format, seperator)!;
       if (isNegative) { -1 * natValue } else { natValue }; // Revert to negative if was negative
     };
   };
@@ -44,10 +44,10 @@ module {
     toTextAdvanced(value, #decimal);
   };
 
-  public func toTextAdvanced(value : Int, base : Base) : Text {
+  public func toTextAdvanced(value : Int, format : Format) : Text {
     let natValue : Nat = Int.abs(value); // Convert to nat to use NatX.toTextAdvanced
     let isNegative = natValue != value;
-    let natTextValue = NatX.toTextAdvanced(natValue, base);
+    let natTextValue = NatX.toTextAdvanced(natValue, format);
     if (isNegative) { "-" # natTextValue } else { natTextValue }; // Add negative sign if negative
   };
 

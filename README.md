@@ -67,6 +67,26 @@ Decodes a `FloatX` from an iteration of bytes. If null is returned, then there w
 
 ## IntX
 
+`toText(value : Int) : Text`
+
+Converts an Int into a text representation. Outputs a decimal value (-?[0-9]+).
+
+`toTextAdvanced(value : Int, format : Format) : Text`
+
+Converts an Int into a text representation. Allows for the specification of the output format.
+
+`fromText(value : Text) : ?Int`
+
+Converts text representation of a decimal integer (-?[0-9]+). If the text cannot
+be parsed as an integer, the value returned will be null. Same as calling the `fromTextAdvanced`
+with the `#decimal` format and no seperator
+
+`fromTextAdvanced(value : Text, format : Format, seperator : ?Char) : ?Int`
+
+Converts text representation of an integer in a specified format. Optioanlly can specify the
+seperator that should be ignored (',' for 1,000,000 or '\_' for 1_000_000). If the text cannot
+be parsed as an integer, the value returned will be null
+
 `from64To8(value: Int64) : Int8`
 
 Conversion. Traps on overflow/underflow.
@@ -172,6 +192,26 @@ Decodes the iteration of bytes into a value. If invalid bytes, null will be retu
 Decodes the iteration of bytes into a value. If invalid bytes, null will be returned
 
 ## NatX
+
+`toText(value : Nat) : Text`
+
+Converts an Nat into a text representation. Outputs a decimal value (-?[0-9]+).
+
+`toTextAdvanced(value : Nat, format : Format) : Text`
+
+Converts an Nat into a text representation. Allows for the specification of the output format.
+
+`fromText(value : Text) : ?Nat`
+
+Converts text representation of a decimal positive integer (-?[0-9]+). If the text cannot
+be parsed as an positive integer, the value returned will be null. Same as calling the `fromTextAdvanced`
+with the `#decimal` format and no seperator
+
+`fromTextAdvanced(value : Text, format : Format, seperator : ?Char) : ?Nat`
+
+Converts text representation of an positive integer in a specified format. Optioanlly can specify the
+seperator that should be ignored (',' for 1,000,000 or '\_' for 1_000_000). If the text cannot
+be parsed as an positive integer, the value returned will be null
 
 `from64To8(value: Nat64) : Nat8`
 

@@ -17,23 +17,23 @@ import Prelude "mo:base/Prelude";
 
 module {
 
-  public type Base = { #binary; #decimal; #hexadecimal };
+  public type Format = { #binary; #decimal; #hexadecimal };
 
   public func fromText(value : Text) : ?Nat {
     fromTextAdvanced(value, #decimal, null);
   };
 
-  public func fromTextAdvanced(value : Text, base : Base, seperator : ?Char) : ?Nat {
+  public func fromTextAdvanced(value : Text, format : Format, seperator : ?Char) : ?Nat {
     if (value == "") {
       return null;
     };
 
-    let maxCharScalarValue = switch (base) {
+    let maxCharScalarValue = switch (format) {
       case (#binary) 1;
       case (#decimal) 9;
       case (#hexadecimal) 15;
     };
-    let baseScalar = switch (base) {
+    let baseScalar = switch (format) {
       case (#binary) 2;
       case (#decimal) 10;
       case (#hexadecimal) 16;
@@ -93,12 +93,12 @@ module {
     toTextAdvanced(value, #decimal);
   };
 
-  public func toTextAdvanced(value : Nat, base : Base) : Text {
+  public func toTextAdvanced(value : Nat, format : Format) : Text {
     if (value == 0) {
       return "0";
     };
 
-    let baseScalar = switch (base) {
+    let baseScalar = switch (format) {
       case (#binary) 2;
       case (#decimal) 10;
       case (#hexadecimal) 16;

@@ -1,12 +1,9 @@
 import Buffer "mo:base/Buffer";
-import Debug "mo:base/Debug";
 import Float "mo:base/Float";
 import Int "mo:base/Int";
 import Int64 "mo:base/Int64";
 import Iter "mo:base/Iter";
 import Nat "mo:base/Nat";
-import Nat16 "mo:base/Nat16";
-import Nat32 "mo:base/Nat32";
 import Nat64 "mo:base/Nat64";
 import NatX "./NatX";
 
@@ -21,11 +18,25 @@ module {
     mantissa : Nat;
   };
 
+  /// Compares two floating-point numbers for near equality within specified tolerances.
+  ///
+  /// ```motoko
+  /// let a : Float = 0.1;
+  /// let b : Float = 0.10000000000000001;
+  /// let result = nearlyEqual(a, b, 1e-15, 1e-15);
+  /// // result is true
+  /// ```
   public func nearlyEqual(a : Float, b : Float, relativeTolerance : Float, absoluteTolerance : Float) : Bool {
     let maxAbsoluteValue : Float = Float.max(Float.abs(a), Float.abs(b));
     Float.abs(a -b) <= Float.max(relativeTolerance * maxAbsoluteValue, absoluteTolerance);
   };
 
+  /// Converts a `Float` to a `FloatX` with the specified precision.
+  ///
+  /// ```motoko
+  /// let float : Float = 3.14159;
+  /// let floatX : FloatX = fromFloat(float, #f32);
+  /// ```
   public func fromFloat(float : Float, precision : FloatPrecision) : FloatX {
     let bitInfo : PrecisionBitInfo = getPrecisionBitInfo(precision);
     if (float == 0.0) {
@@ -80,6 +91,17 @@ module {
     };
   };
 
+  /// Converts a `FloatX` to a `Float`.
+  ///
+  /// ```motoko
+  /// let floatX : FloatX = {
+  ///   precision = #f32;
+  ///   isNegative = false;
+  ///   exponent = ?1;
+  ///   mantissa = 5033165;
+  /// };
+  /// let float : Float = toFloat(floatX);
+  /// ```
   public func toFloat(fX : FloatX) : Float {
     let bitInfo : PrecisionBitInfo = getPrecisionBitInfo(fX.precision);
 
@@ -90,13 +112,20 @@ module {
 
     let sign = if (fX.isNegative) -1.0 else 1.0;
     let (exponent : Int, x : Nat) = switch (fX.exponent) {
-      case (null)(-14, 0); // If null, its subnormal. use min exponent here
-      case (?exponent)(exponent, 1);
+      case (null) (-14, 0); // If null, its subnormal. use min exponent here
+      case (?exponent) (exponent, 1);
     };
     let expValue : Float = calculateExponent(2, Float.fromInt(exponent));
     sign * expValue * (Float.fromInt(x) + Float.fromInt(fX.mantissa) / Float.fromInt(bitInfo.maxMantissaDenomiator));
   };
 
+  /// Encodes a `FloatX` to a byte buffer.
+  ///
+  /// ```motoko
+  /// let floatX : FloatX = fromFloat(3.14159, #f32);
+  /// let buffer = Buffer.Buffer<Nat8>(4);
+  /// encode(buffer, floatX, #lsb);
+  /// ```
   public func encode(buffer : Buffer.Buffer<Nat8>, value : FloatX, encoding : { #lsb; #msb }) {
     var bits : Nat64 = 0;
     if (value.isNegative) {
@@ -129,6 +158,16 @@ module {
     };
   };
 
+  /// Decodes a `FloatX` from an iteration of bytes.
+  ///
+  /// ```motoko
+  /// let bytes : [Nat8] = [64, 73, 15, 219]; // Encoded bytes for 3.14159 (f32)
+  /// let result = decode(bytes.vals(), #f32, #lsb);
+  /// switch (result) {
+  ///   case (null) { /* Handle decoding error */ };
+  ///   case (?floatX) { /* Use decoded FloatX */ };
+  /// };
+  /// ```
   public func decode(bytes : Iter.Iter<Nat8>, precision : { #f16; #f32; #f64 }, encoding : { #lsb; #msb }) : ?FloatX {
     do ? {
       let bits : Nat64 = switch (precision) {
@@ -191,9 +230,9 @@ module {
 
   private func getPrecisionBitInfo(precision : FloatPrecision) : PrecisionBitInfo {
     let (exponentBitLength : Nat, mantissaBitLength : Nat) = switch (precision) {
-      case (#f16)(5, 10);
-      case (#f32)(8, 23);
-      case (#f64)(11, 52);
+      case (#f16) (5, 10);
+      case (#f32) (8, 23);
+      case (#f64) (11, 52);
     };
     let maxExponent : Int = 2 ** (exponentBitLength - 1) - 1;
     let minExponent : Int = -1 * (maxExponent - 1);

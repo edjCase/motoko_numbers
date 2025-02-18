@@ -6,7 +6,7 @@ name = "xtended-numbers"
 version = "0.3.1"
 description = "Extended functionality for motoko number types, such as byte encoding"
 repository = "https://github.com/edjCase/motoko_numbers"
-keywords = [ "numbers" ]
+keywords = ["numbers", "int", "integer", "nat", "float", "encode", "decode"]
 license = "MIT"
 
 [dev-dependencies]

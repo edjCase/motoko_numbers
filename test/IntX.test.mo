@@ -45,19 +45,19 @@ func testInt64(bytes : [Nat8], expected : Int64) {
     testIntX(IntX.decodeInt64, IntX.encodeInt64, Int64.equal, Int64.toText, bytes, expected);
 };
 
-func testInt(bytes : [Nat8], expected : Int, encoding : { #signedLEB128; #msb }) {
+func testInt(bytes : [Nat8], expected : Int, encoding : { #signedLEB128; #lsb; #msb }) {
     let actual : ?Int = IntX.decodeInt(Iter.fromArray(bytes), encoding);
     switch (actual) {
         case (null) Debug.trap("Unable to parse Int from bytes: " # Util.toHexString(bytes));
         case (?a) {
             if (a != expected) {
-                Debug.trap("Expected: " # Int.toText(expected) # "\nActual: " # Int.toText(a) # "\nBytes: " # Util.toHexString(bytes));
+                Debug.trap("\nExpected: " # Int.toText(expected) # "\nActual: " # Int.toText(a) # "\nBytes: " # Util.toHexString(bytes));
             };
             let buffer = Buffer.Buffer<Nat8>(bytes.size());
             IntX.encodeInt(buffer, expected, encoding);
-            let expectedBytes : [Nat8] = Buffer.toArray(buffer);
-            if (not TestUtil.bytesAreEqual(bytes, expectedBytes)) {
-                Debug.trap("Expected Bytes: " # Util.toHexString(expectedBytes) # "\nActual Bytes: " # Util.toHexString(bytes));
+            let actualBytes : [Nat8] = Buffer.toArray(buffer);
+            if (not TestUtil.bytesAreEqual(bytes, actualBytes)) {
+                Debug.trap("\nInt Value: " # Int.toText(expected) # "\nEncoding: " #debug_show (encoding) # "\nExpected Bytes: " # Util.toHexString(bytes) # "\nActual Bytes: " # Util.toHexString(actualBytes));
             };
         };
     };
@@ -178,8 +178,8 @@ test(
         testInt([0x00], 0, #msb);
         testInt([0x10], 16, #msb);
         testInt([0x7F], 127, #msb);
-        testInt([0x80], 128, #msb);
-        testInt([0xFF], 255, #msb);
+        testInt([0x00, 0x80], 128, #msb);
+        testInt([0x00, 0xFF], 255, #msb);
         testInt([0x01, 0x00], 256, #msb);
         testInt([0xFF], -1, #msb);
         testInt([0xFC], -4, #msb);
@@ -193,6 +193,26 @@ test(
         testInt([0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00], 9223372036854775808, #msb); // Int64.max + 1
         testInt([0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00], -9223372036854775808, #msb); // Int64.min
         testInt([0xFF, 0x7F, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF], -9223372036854775809, #msb); // Int64.min - 1
+
+        // LSB
+        testInt([0x00], 0, #lsb);
+        testInt([0x10], 16, #lsb);
+        testInt([0x7F], 127, #lsb);
+        testInt([0x80, 0x00], 128, #lsb);
+        testInt([0xFF, 0x00], 255, #lsb);
+        testInt([0x00, 0x01], 256, #lsb);
+        testInt([0xFF], -1, #lsb);
+        testInt([0xFC], -4, #lsb);
+        testInt([0xF1], -15, #lsb);
+        testInt([0xBC], -68, #lsb);
+        testInt([0x80], -128, #lsb);
+        testInt([0x7F, 0xFF], -129, #lsb);
+        testInt([0x65, 0x87, 0x09], 624485, #lsb);
+        testInt([0xC0, 0x1D, 0xFE], -123456, #lsb);
+        testInt([0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x7F], 9223372036854775807, #lsb); // Int64.max
+        testInt([0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00], 9223372036854775808, #lsb); // Int64.max + 1
+        testInt([0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80], -9223372036854775808, #lsb); // Int64.min
+        testInt([0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x7F, 0xFF], -9223372036854775809, #lsb); // Int64.min - 1
 
         testToText(
             0,

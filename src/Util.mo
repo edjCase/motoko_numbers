@@ -5,6 +5,7 @@ import Int "mo:base/Int";
 import Iter "mo:base/Iter";
 import Nat8 "mo:base/Nat8";
 import Text "mo:base/Text";
+import Debug "mo:base/Debug";
 
 module {
     /// Converts a natural number to its binary representation as an array of booleans.
@@ -133,7 +134,7 @@ module {
             let index = Int.abs(n);
             if (varBits[index]) {
                 varBits[index] := false;
-                for (i in Iter.revRange(index -1, 0)) {
+                for (i in Iter.revRange(index - 1, 0)) {
                     varBits[Int.abs(i)] := true;
                 };
                 break f;
@@ -207,5 +208,125 @@ module {
         let c1 = symbols[Nat8.toNat(w8 / base)];
         let c2 = symbols[Nat8.toNat(w8 % base)];
         "0x" # Char.toText(c1) # Char.toText(c2);
+    };
+
+    /// Converts Nat to LSB bits, pads to multiple of 8.
+    public func natToPaddedBitsLSB(val : Nat) : [Bool] {
+        let bitsBuffer = Buffer.Buffer<Bool>(64);
+        if (val == 0) {
+            // Need at least one byte for zero if requested this way
+            // However, the Classic functions handle 0 separately.
+            // If called with 0, produce empty bits? Or 8 false bits?
+            // Let's assume the Classic wrappers handle 0, so this only sees val > 0.
+        } else {
+            var currentVal = val;
+            while (currentVal > 0) {
+                bitsBuffer.add(currentVal % 2 != 0);
+                currentVal /= 2;
+            };
+        };
+
+        // Pad bits to multiple of 8 (add false=0 at MSB end)
+        while (bitsBuffer.size() == 0 or bitsBuffer.size() % 8 != 0) {
+            bitsBuffer.add(false);
+        };
+        Buffer.toArray(bitsBuffer);
+    };
+
+    /// Converts LSB bits (must be multiple of 8) to LSB-ordered bytes.
+    public func bitsLSBToBytesLSB(bits : [Bool]) : [Nat8] {
+        if (bits.size() % 8 != 0) {
+            // This shouldn't happen if natToPaddedBitsLSB is used correctly
+            Debug.trap("bitsLSBToBytesLSB: Input bits count not multiple of 8");
+        };
+        let numBytes = bits.size() / 8;
+        if (numBytes == 0) return [];
+
+        var bytes = Buffer.Buffer<Nat8>(numBytes);
+        for (i in Iter.range(0, numBytes - 1)) {
+            var byte : Nat8 = 0;
+            for (j in Iter.range(0, 7)) {
+                let bitIndex = i * 8 + j;
+                if (bits[bitIndex]) {
+                    byte := Nat8.bitset(byte, j);
+                };
+            };
+            bytes.add(byte);
+        };
+        Buffer.toArray(bytes);
+    };
+
+    /// Writes bytes to buffer respecting encoding order.
+    public func writeBytes(buffer : Buffer.Buffer<Nat8>, bytes : [Nat8], encoding : { #lsb; #msb }) {
+        switch (encoding) {
+            case (#lsb) {
+                // Add LSB first
+                for (byte in bytes.vals()) {
+                    buffer.add(byte);
+                };
+            };
+            case (#msb) {
+                // Add MSB first (reverse the LSB-ordered bytes)
+                let numBytes = bytes.size();
+                if (numBytes > 0) {
+                    for (i in Iter.revRange(numBytes - 1, 0)) {
+                        buffer.add(bytes[Int.abs(i)]);
+                    };
+                };
+            };
+        };
+    };
+
+    /// Reads all bytes from iterator. Returns null if iterator is initially empty.
+    public func readAllBytes(iter : Iter.Iter<Nat8>) : ?[Nat8] {
+        let bytesBuffer = Buffer.Buffer<Nat8>(16);
+        var hasBytes = false;
+        for (byte in iter) {
+            hasBytes := true;
+            bytesBuffer.add(byte);
+        };
+        if (not hasBytes) { return null } else {
+            return ?Buffer.toArray(bytesBuffer);
+        };
+    };
+
+    /// Converts bytes (ordered by encoding) to LSB-ordered bits.
+    public func bytesToBitsLSB(bytes : [Nat8], encoding : { #lsb; #msb }) : [Bool] {
+        let numBytes = bytes.size();
+        if (numBytes == 0) return [];
+
+        let totalBits = numBytes * 8;
+        var bits = Buffer.Buffer<Bool>(totalBits);
+        let byteRange = switch (encoding) {
+            case (#lsb) Iter.range(0, numBytes - 1); // Process LSB byte first
+            case (#msb) Iter.revRange(numBytes - 1, 0); // Process MSB byte first
+        };
+
+        // Always build the 'bits' array in LSB order
+        for (i in byteRange) {
+            let byte = bytes[Int.abs(i)]; // Use Nat.abs for revRange index
+            for (j in Iter.range(0, 7)) {
+                // LSB (bit 0) to MSB (bit 7) within byte
+                bits.add(Nat8.bittest(byte, j));
+            };
+        };
+        Buffer.toArray(bits);
+    };
+
+    /// Converts LSB-ordered bits to Nat.
+    public func bitsLSBToNat(bits : [Bool]) : Nat {
+        var value : Nat = 0;
+        var powerOfTwo : Nat = 1; // Start with 2^0
+        let lastIndex : Nat = bits.size() - 1;
+        for (i in Iter.range(0, lastIndex)) {
+            if (bits[i]) {
+                value += powerOfTwo;
+            };
+            if (i < lastIndex) {
+                // Avoid overflow on last iteration if Nat has limits
+                powerOfTwo *= 2; // Safe arbitrary precision Nat handles large powers
+            };
+        };
+        value;
     };
 };

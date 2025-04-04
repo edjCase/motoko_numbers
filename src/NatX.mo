@@ -342,8 +342,10 @@ module {
   /// NatX.encodeNat(buffer, 123, #unsignedLEB128);
   /// // buffer now contains the encoded bytes
   /// ```
-  public func encodeNat(buffer : Buffer.Buffer<Nat8>, value : Nat, encoding : { #unsignedLEB128 }) {
+  public func encodeNat(buffer : Buffer.Buffer<Nat8>, value : Nat, encoding : { #unsignedLEB128; #lsb; #msb }) {
     switch (encoding) {
+      case (#lsb) encodeNatClassic(buffer, value, #lsb);
+      case (#msb) encodeNatClassic(buffer, value, #msb);
       case (#unsignedLEB128) {
         if (value == 0) {
           buffer.add(0);
@@ -502,7 +504,7 @@ module {
         let b = from8To64(bytes.next()!);
         let byteOffset : Nat64 = switch (encoding) {
           case (#lsb) Nat64.fromNat(i);
-          case (#msb) Nat64.fromNat(Nat64.toNat(byteLength -1) - i);
+          case (#msb) Nat64.fromNat(Nat64.toNat(byteLength - 1) - i);
         };
         nat64 |= b << (byteOffset * 8);
       };
@@ -515,7 +517,7 @@ module {
     for (i in Iter.range(0, Nat64.toNat(byteLength) - 1)) {
       let byteOffset : Nat64 = switch (encoding) {
         case (#lsb) Nat64.fromNat(i);
-        case (#msb) Nat64.fromNat(Nat64.toNat(byteLength -1) - i);
+        case (#msb) Nat64.fromNat(Nat64.toNat(byteLength - 1) - i);
       };
       let byte : Nat8 = from64To8((value >> (byteOffset * 8)) & 0xff);
       buffer.add(byte);
@@ -528,5 +530,16 @@ module {
       case (#b32) 4;
       case (#b64) 8;
     };
+  };
+
+  private func encodeNatClassic(buffer : Buffer.Buffer<Nat8>, value : Nat, encoding : { #lsb; #msb }) {
+    if (value == 0) {
+      buffer.add(0); // Handle 0 separately
+      return;
+    };
+    // Nat specific: No sign logic needed
+    let bits = Util.natToPaddedBitsLSB(value);
+    let bytes = Util.bitsLSBToBytesLSB(bits);
+    Util.writeBytes(buffer, bytes, encoding);
   };
 };

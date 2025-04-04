@@ -45,7 +45,7 @@ func testNat64(bytes : [Nat8], expected : Nat64) {
     testNatX(NatX.decodeNat64, NatX.encodeNat64, Nat64.equal, Nat64.toText, bytes, expected);
 };
 
-func testNat(bytes : [Nat8], expected : Nat, encoding : { #unsignedLEB128 }) {
+func testNat(bytes : [Nat8], expected : Nat, encoding : { #unsignedLEB128; #lsb; #msb }) {
     let actual : ?Nat = NatX.decodeNat(Iter.fromArray(bytes), encoding);
     switch (actual) {
         case (null) Debug.trap("Unable to parse nat from bytes: " # Util.toHexString(bytes));
@@ -117,7 +117,7 @@ test(
 );
 
 test(
-    "Nat816",
+    "Nat16",
     func() {
         testNat16([0x00, 0x00], 0);
         testNat16([0x00, 0x01], 1);
@@ -158,6 +158,26 @@ test(
         testNat([0x01], 1, #unsignedLEB128);
         testNat([0x7f], 127, #unsignedLEB128);
         testNat([0xe5, 0x8e, 0x26], 624485, #unsignedLEB128);
+
+        testNat([0x00], 0, #msb);
+        testNat([0x10], 16, #msb);
+        testNat([0x7F], 127, #msb);
+        testNat([0x80], 128, #msb);
+        testNat([0xFF], 255, #msb);
+        testNat([0x01, 0x00], 256, #msb);
+        testNat([0x09, 0x87, 0x65], 624485, #msb);
+        testNat([0x7F, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF], 9223372036854775807, #msb);
+        testNat([0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00], 9223372036854775808, #msb);
+
+        testNat([0x00], 0, #lsb);
+        testNat([0x10], 16, #lsb);
+        testNat([0x7F], 127, #lsb);
+        testNat([0x80], 128, #lsb);
+        testNat([0xFF], 255, #lsb);
+        testNat([0x00, 0x01], 256, #lsb);
+        testNat([0x65, 0x87, 0x09], 624485, #lsb);
+        testNat([0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x7F], 9223372036854775807, #lsb);
+        testNat([0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80], 9223372036854775808, #lsb);
 
         testToText(
             0,

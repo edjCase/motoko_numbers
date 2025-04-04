@@ -45,7 +45,7 @@ func testInt64(bytes : [Nat8], expected : Int64) {
     testIntX(IntX.decodeInt64, IntX.encodeInt64, Int64.equal, Int64.toText, bytes, expected);
 };
 
-func testInt(bytes : [Nat8], expected : Int, encoding : { #signedLEB128 }) {
+func testInt(bytes : [Nat8], expected : Int, encoding : { #signedLEB128; #msb }) {
     let actual : ?Int = IntX.decodeInt(Iter.fromArray(bytes), encoding);
     switch (actual) {
         case (null) Debug.trap("Unable to parse Int from bytes: " # Util.toHexString(bytes));
@@ -164,6 +164,7 @@ test(
 test(
     "Int",
     func() {
+        // LEB128
         testInt([0xc0, 0xbb, 0x78], -123456, #signedLEB128);
         testInt([0xbc, 0x7f], -68, #signedLEB128);
         testInt([0x71], -15, #signedLEB128);
@@ -172,6 +173,26 @@ test(
         testInt([0x10], 16, #signedLEB128);
         testInt([0x80, 0x01], 128, #signedLEB128);
         testInt([0xe5, 0x8e, 0x26], 624485, #signedLEB128);
+
+        // MSB
+        testInt([0x00], 0, #msb);
+        testInt([0x10], 16, #msb);
+        testInt([0x7F], 127, #msb);
+        testInt([0x80], 128, #msb);
+        testInt([0xFF], 255, #msb);
+        testInt([0x01, 0x00], 256, #msb);
+        testInt([0xFF], -1, #msb);
+        testInt([0xFC], -4, #msb);
+        testInt([0xF1], -15, #msb);
+        testInt([0xBC], -68, #msb);
+        testInt([0x80], -128, #msb);
+        testInt([0xFF, 0x7F], -129, #msb);
+        testInt([0x09, 0x87, 0x65], 624485, #msb);
+        testInt([0xFE, 0x1D, 0xC0], -123456, #msb);
+        testInt([0x7F, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF], 9223372036854775807, #msb); // Int64.max
+        testInt([0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00], 9223372036854775808, #msb); // Int64.max + 1
+        testInt([0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00], -9223372036854775808, #msb); // Int64.min
+        testInt([0xFF, 0x7F, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF], -9223372036854775809, #msb); // Int64.min - 1
 
         testToText(
             0,

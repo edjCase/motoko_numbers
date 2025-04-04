@@ -12,6 +12,7 @@ import Array "mo:base/Array";
 import NatX "./NatX";
 import Util "./Util";
 import Text "mo:base/Text";
+import Debug "mo:base/Debug";
 
 module {
   public type Format = NatX.Format;
@@ -260,8 +261,9 @@ module {
   /// IntX.encodeInt(buffer, -123, #signedLEB128);
   /// // buffer now contains the encoded bytes
   /// ```
-  public func encodeInt(buffer : Buffer.Buffer<Nat8>, value : Int, encoding : { #signedLEB128 }) {
+  public func encodeInt(buffer : Buffer.Buffer<Nat8>, value : Int, encoding : { #signedLEB128; #msb }) {
     switch (encoding) {
+      case (#msb) encodeIntMSB(buffer, value);
       case (#signedLEB128) {
         if (value == 0) {
           buffer.add(0);
@@ -339,9 +341,10 @@ module {
   ///   case (?value) { /* value is -123456 */ };
   /// };
   /// ```
-  public func decodeInt(bytes : Iter.Iter<Nat8>, encoding : { #signedLEB128 }) : ?Int {
+  public func decodeInt(bytes : Iter.Iter<Nat8>, encoding : { #signedLEB128; #msb }) : ?Int {
     do ? {
       switch (encoding) {
+        case (#msb) return decodeIntMSB(bytes);
         case (#signedLEB128) {
           var bits : [Bool] = Util.invariableLengthBytesDecode(bytes);
           let isNegative = bits[bits.size() - 1];
@@ -448,7 +451,7 @@ module {
         let b : Nat8 = bytes.next()!;
         let byteOffset : Nat64 = switch (encoding) {
           case (#lsb) Nat64.fromNat(i);
-          case (#msb) Nat64.fromNat(Nat64.toNat(byteLength -1) - i);
+          case (#msb) Nat64.fromNat(Nat64.toNat(byteLength - 1) - i);
         };
         nat64 |= NatX.from8To64(b) << (byteOffset * 8);
       };
@@ -493,6 +496,179 @@ module {
       };
       let byte : Int64 = (value >> (byteOffset * 8)) & 0xff;
       buffer.add(Nat8.fromNat(Int.abs(Int64.toInt(byte))));
+    };
+  };
+
+  private func decodeIntMSB(bytesIter : Iter.Iter<Nat8>) : ?Int {
+    // 1. Read the first byte
+    let firstByte = switch (bytesIter.next()) {
+      case (null) return null;
+      case (?firstByte) firstByte;
+    };
+    var numBytesConsumed : Nat = 1; // We've consumed one byte
+
+    // 2. Determine sign based on the first byte read
+    let isNegative = (firstByte & 0x80) != 0;
+
+    // 3. Initialize result (accumulates the value as if it were positive/unsigned)
+    var result : Int = Nat8.toNat(firstByte);
+
+    // 4. Store the second byte if it exists (needed for non-minimal checks)
+    var secondByteOpt : ?Nat8 = null;
+    var isFirstLoopIteration = true;
+
+    // 5. Loop through the rest of the bytes in the iterator
+    label w while (true) {
+      let nextOpt = bytesIter.next();
+      switch (nextOpt) {
+        case (null) {
+          // End of iterator, break the loop
+          break w;
+        };
+        case (?nextByte) {
+          // We have another byte
+          numBytesConsumed += 1; // Increment count
+
+          // Store the second byte (only on the first pass through the loop)
+          if (isFirstLoopIteration) {
+            secondByteOpt := ?nextByte;
+            isFirstLoopIteration := false; // Don't store again
+          };
+          // Accumulate the value by shifting left (multiply by 256) and adding new byte
+          result := result * 256;
+          result := result + Nat8.toNat(nextByte);
+        };
+      };
+    };
+
+    // --- Iterator consumed, perform final checks and calculations ---
+
+    // 6. Perform DER non-minimal encoding checks
+    // These checks only apply if more than one byte was consumed
+    if (numBytesConsumed > 1) {
+      // We must have read a second byte if numBytesConsumed > 1
+      let secondByte = switch (secondByteOpt) {
+        case (?b) b;
+        case null Debug.trap("Internal logic error: numBytes > 1 but secondByteOpt is null");
+      };
+
+      if (not isNegative) {
+        // Check positive non-minimal: [0x00] followed by [MSB=0 byte]
+        if (firstByte == 0x00 and (secondByte & 0x80) == 0) {
+          return null;
+        };
+      } else {
+        // isNegative
+        // Check negative non-minimal: [0xFF] followed by [MSB=1 byte]
+        if (firstByte == 0xFF and (secondByte & 0x80) != 0) {
+          return null;
+        };
+      };
+    };
+
+    // 7. Final value calculation
+    if (isNegative) {
+      // Calculate the range based on the total number of bytes consumed
+      let numBits : Nat = numBytesConsumed * 8;
+      // Need at least one bit for a valid integer representation.
+      // numBytesConsumed is guaranteed >= 1 here.
+      let range = powerOf2(numBits);
+
+      // Adjust using two's complement rule: result = positive_magnitude - range
+      let finalResult = result - range;
+      return ?finalResult;
+    } else {
+      // For positive numbers, 'result' already holds the correct value
+      return ?result;
+    };
+  };
+
+  // Helper to calculate 2^n for Int (needed for range calculation)
+  // Note: n should not be excessively large to avoid long computation times.
+  private func powerOf2(n : Nat) : Int {
+    if (n == 0) { return 1 }; // Base case 2^0 = 1
+    var range : Int = 1;
+    var i : Nat = 0;
+    while (i < n) {
+      range := range * 2;
+      i += 1;
+    };
+    range;
+  };
+
+  // Helper to convert a non-negative Int to big-endian bytes.
+  // Ensures the specified 'byteLength' by padding with leading zeros if needed.
+  private func nonNegativeIntToBytesBE(buffer : Buffer.Buffer<Nat8>, value : Int, byteLength : Nat) {
+    assert (value >= 0 and byteLength > 0);
+
+    let buf = Buffer.Buffer<Nat8>(byteLength); // Use buffer to collect bytes LSB first
+    var temp = value;
+    var bytesAdded : Nat = 0;
+
+    while (temp > 0) {
+      let byteVal = temp % 256;
+      buf.add(Nat8.fromNat(Int.abs(byteVal))); // Add LSB
+      temp := temp / 256;
+      bytesAdded += 1;
+    };
+    assert (bytesAdded == byteLength);
+
+    // Reverse the buffer to get big-endian order
+    for (i in Iter.range(0, bytesAdded - 1)) {
+      let byte = buf.get(bytesAdded - 1 - i);
+      buffer.add(byte); // Add to the final buffer
+    };
+  };
+
+  private func encodeIntMSB(buffer : Buffer.Buffer<Nat8>, value : Int) {
+    Debug.print("Encoding MSB: " # debug_show value);
+    // Handle Zero: DER encoding is [0x00]
+    if (value == 0) {
+      buffer.add(0x00);
+      return;
+    };
+
+    // Handle Positive Numbers
+    if (value > 0) {
+      // Determine minimal byte length needed first
+      var n_bytes = 0;
+      var temp_val = value;
+      var firstByteMSBSet = false;
+      while (temp_val > 0) {
+        n_bytes += 1;
+        let byteVal = temp_val % 256;
+        temp_val := temp_val / 256;
+        // If this is the last byte (temp_val is now 0), check its MSB
+        if (temp_val == 0) {
+          firstByteMSBSet := (byteVal >= 128);
+        };
+      };
+
+      // Encode the positive value into the final number of bytes
+      nonNegativeIntToBytesBE(buffer, value, n_bytes);
+
+    }
+    // Handle Negative Numbers
+    else {
+      // value < 0
+      // Determine the minimal number of bytes 'n' such that value >= -(2^(n*8 - 1))
+      var n_bytes = 1;
+      // Calculate the lower bound for the current number of bytes
+      var lowerBound : Int = -powerOf2(n_bytes * 8 - 1); // -(2^7) = -128 for n_bytes=1
+
+      while (value < lowerBound) {
+        n_bytes += 1;
+        lowerBound := -powerOf2(n_bytes * 8 - 1); // Update lower bound check
+      };
+      let numBytes = n_bytes; // Minimal bytes needed
+
+      // Calculate positive equivalent: value + 2^(numBytes * 8)
+      let numBits = numBytes * 8;
+      let range = powerOf2(numBits);
+      let posEquiv = value + range;
+
+      // Encode posEquiv into exactly numBytes bytes (big-endian)
+      nonNegativeIntToBytesBE(buffer, posEquiv, numBytes);
     };
   };
 

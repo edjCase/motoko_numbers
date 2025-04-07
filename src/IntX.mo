@@ -253,7 +253,7 @@ module {
     Int8.toInt(value);
   };
 
-  /// Encodes an Int to a byte buffer using signed LEB128 encoding.
+  /// Encodes an Int to a byte buffer using the specified encoding.
   ///
   /// ```motoko
   /// let buffer = Buffer.Buffer<Nat8>(8);
@@ -503,151 +503,85 @@ module {
   /// Encodes an arbitrary precision Int using MSB or LSB classic two's complement.
   private func encodeIntClassic(buffer : Buffer.Buffer<Nat8>, value : Int, encoding : { #lsb; #msb }) {
     if (value == 0) {
-      buffer.add(0);
+      buffer.add(0); // Handle 0 separately
       return;
     };
 
     let isNegative = value < 0;
     let natValue = Int.abs(value);
 
-    // 1. Get bits of absolute value (LSB order) using manual loop
-    var currentVal = natValue;
-    let bitsBuffer = Buffer.Buffer<Bool>(64); // Start with reasonable capacity
-    if (currentVal == 0) {
-      // Should not happen if value != 0, but safety
-      bitsBuffer.add(false);
-    } else {
-      while (currentVal > 0) {
-        bitsBuffer.add(currentVal % 2 != 0);
-        currentVal /= 2;
-      };
-    };
+    // Use helper for bits from absolute value
+    var bits = Util.natToPaddedBitsLSB(natValue);
 
-    // 2. Pad to multiple of 8 bits (add false=0 at MSB end)
-    while (bitsBuffer.size() % 8 != 0) {
-      bitsBuffer.add(false);
-    };
-
-    var bits = Buffer.toArray(bitsBuffer);
-
-    // 3. Apply two's complement if negative
+    // Int specific: Apply two's complement if negative
     if (isNegative) {
-      bits := Util.twosCompliment(bits);
+      bits := Util.twosCompliment(bits); // Assumes Util.twosCompliment exists and works on LSB bits
     };
 
-    // 4. Check MSB for sign extension necessity
-    let msbIndex : Nat = bits.size() - 1;
-    if (isNegative and not bits[msbIndex]) {
-      // Negative number requires MSB to be 1. Pad with 0xFF byte (8 true bits at MSB end)
-      let currentSize = bits.size();
-      let newBits = Buffer.Buffer<Bool>(currentSize + 8);
-      for (b in bits.vals()) { newBits.add(b) };
-      for (_ in Iter.range(1, 8)) { newBits.add(true) };
-      bits := Buffer.toArray(newBits);
-    } else if (not isNegative and bits[msbIndex]) {
-      // Positive number requires MSB to be 0. Pad with 0x00 byte (8 false bits at MSB end)
-      let currentSize = bits.size();
-      let newBits = Buffer.Buffer<Bool>(currentSize + 8);
-      for (b in bits.vals()) { newBits.add(b) };
-      for (_ in Iter.range(1, 8)) { newBits.add(false) };
-      bits := Buffer.toArray(newBits);
+    // Int specific: Check MSB for sign extension necessity
+    if (bits.size() > 0) {
+      // Ensure not empty (shouldn't be if value != 0)
+      let msbIndex : Nat = bits.size() - 1;
+      let msb = bits[msbIndex];
+
+      if (isNegative and not msb) {
+        // Negative number requires MSB=1. Pad with 0xFF byte (8 true bits at MSB end)
+        let currentSize = bits.size();
+        let newBits = Buffer.Buffer<Bool>(currentSize + 8);
+        for (b in bits.vals()) { newBits.add(b) };
+        for (_ in Iter.range(1, 8)) { newBits.add(true) }; // Add 8 'true' bits
+        bits := Buffer.toArray(newBits);
+      } else if (not isNegative and msb) {
+        // Positive number requires MSB=0. Pad with 0x00 byte (8 false bits at MSB end)
+        let currentSize = bits.size();
+        let newBits = Buffer.Buffer<Bool>(currentSize + 8);
+        for (b in bits.vals()) { newBits.add(b) };
+        for (_ in Iter.range(1, 8)) { newBits.add(false) }; // Add 8 'false' bits
+        bits := Buffer.toArray(newBits);
+      };
     };
 
-    // 5. Convert LSB-ordered bits to bytes
-    let numBytes = bits.size() / 8;
-    var bytes = Buffer.Buffer<Nat8>(numBytes);
-    for (i in Iter.range(0, numBytes - 1)) {
-      var byte : Nat8 = 0;
-      for (j in Iter.range(0, 7)) {
-        let bitIndex = i * 8 + j;
-        if (bits[bitIndex]) {
-          byte := Nat8.bitset(byte, j);
-        };
-      };
-      bytes.add(byte);
-    };
-
-    // 6. Add bytes to output buffer in correct order
-    let bytesArray = Buffer.toArray(bytes);
-    switch (encoding) {
-      case (#lsb) {
-        // Add LSB first
-        for (byte in bytesArray.vals()) {
-          buffer.add(byte);
-        };
-      };
-      case (#msb) {
-        // Add MSB first (reverse the generated LSB-first bytes)
-        for (i in Iter.revRange(numBytes - 1, 0)) {
-          buffer.add(bytesArray[Int.abs(i)]);
-        };
-      };
-    };
+    // Use helpers for final steps
+    let bytes = Util.bitsLSBToBytesLSB(bits);
+    Util.writeBytes(buffer, bytes, encoding);
   };
 
   /// Decodes an arbitrary precision Int using MSB or LSB classic two's complement.
   /// Reads all bytes from the iterator.
   private func decodeIntClassic(bytesIter : Iter.Iter<Nat8>, encoding : { #lsb; #msb }) : ?Int {
-    // 1. Read all bytes from iterator
-    let bytesBuffer = Buffer.Buffer<Nat8>(16); // Start with some capacity
-    for (byte in bytesIter) {
-      bytesBuffer.add(byte);
+    // Use helper to read bytes
+    let bytesOpt = Util.readAllBytes(bytesIter);
+    let bytes = switch (bytesOpt) {
+      case (null) return null;
+      case (?b) b;
     };
-
-    if (bytesBuffer.size() < 1) {
-      return null; // No input bytes
+    // Handle all zero bytes case -> 0
+    var allZero = true;
+    label f for (b in bytes.vals()) {
+      if (b != 0) { allZero := false; break f };
     };
-    if (bytesBuffer.size() == 1 and bytesBuffer.get(0) == 0) {
-      return ?0; // Special case for zero
-    };
+    if (allZero) return ?0;
 
-    let bytesArray = Buffer.toArray(bytesBuffer);
-    let numBytes = bytesArray.size();
+    // Use helper to get LSB bits
+    var bits = Util.bytesToBitsLSB(bytes, encoding);
 
-    // 2. Convert bytes to LSB-ordered bits
-    let totalBits = numBytes * 8;
-    var bits = Buffer.Buffer<Bool>(totalBits);
-    let byteRange = switch (encoding) {
-      case (#lsb) Iter.range(0, numBytes - 1); // Process LSB byte first
-      case (#msb) Iter.revRange(numBytes - 1, 0); // Process MSB byte first, but add its bits LSB->MSB
-    };
+    // Int specific: Check sign bit (MSB of the number = last bit in LSB order)
+    let isNegative = if (bits.size() == 0) false else bits[bits.size() - 1];
 
-    // Always build the 'bits' array in LSB order
-    for (i in byteRange) {
-      let byte = bytesArray[Int.abs(i)]; // Use Nat.abs for revRange index
-      for (j in Iter.range(0, 7)) {
-        // LSB (bit 0) to MSB (bit 7) within byte
-        bits.add(Nat8.bittest(byte, j));
-      };
-    };
-    let finalBits = Buffer.toArray(bits);
-
-    // 3. Check sign bit (MSB of the entire sequence, which is the last bit in LSB order)
-    let isNegative = finalBits[finalBits.size() - 1];
-
-    // 4. Convert bits to Int
+    // Int specific: Apply reverse two's complement if negative
     if (isNegative) {
-      // Negative: reverse two's complement, convert to Nat, then negate
-      let positiveBits = Util.reverseTwosCompliment(finalBits);
-      let natValue = bitsToNatLSB(positiveBits);
-      return ?-natValue;
+      bits := Util.reverseTwosCompliment(bits); // Assumes Util.reverseTwosCompliment exists
+    };
+
+    // Use helper to convert (potentially positive-ified) bits to Nat
+    let natValue = Util.bitsLSBToNat(bits);
+
+    // Int specific: Negate if necessary
+    if (isNegative) {
+      return ?(-natValue);
     } else {
-      // Positive: convert directly to Nat, then to Int
-      let natValue = bitsToNatLSB(finalBits);
       return ?natValue;
     };
   };
 
-  /// Helper to convert LSB-ordered bits to Nat
-  private func bitsToNatLSB(bits : [Bool]) : Nat {
-    var value : Nat = 0;
-    var powerOfTwo : Nat = 1; // Start with 2^0
-    for (i in Iter.range(0, bits.size() - 1)) {
-      if (bits[i]) {
-        value += powerOfTwo;
-      };
-      powerOfTwo *= 2; // Move to next power of 2
-    };
-    value;
-  };
 };

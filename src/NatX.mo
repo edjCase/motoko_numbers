@@ -407,7 +407,7 @@ module {
     encodeNatX(buffer, value, encoding, #b64);
   };
 
-  /// Decodes a Nat from a byte iterator using unsigned LEB128 encoding.
+  /// Decodes a Nat from a byte iterator using the specified encoding.
   ///
   /// ```motoko
   /// let bytes : [Nat8] = [0xE5, 0x8E, 0x26]; // 624485 in unsigned LEB128
@@ -417,20 +417,24 @@ module {
   ///   case (?value) { /* value is 624485 */ };
   /// };
   /// ```
-  public func decodeNat(bytes : Iter.Iter<Nat8>, _ : { #unsignedLEB128 }) : ?Nat {
-    do ? {
-      var v : Nat = 0;
-      var i : Nat = 0;
-      label l loop {
-        let byte : Nat8 = bytes.next()!;
-        v += Nat8.toNat(byte & 0x7f) * Nat.pow(2, 7 * i); // Shift over 7 * i bits to get value to add, ignore first bit
-        i += 1;
-        let hasNextByte = (byte & 0x80) == 0x80; // If starts with a 1, there is another byte
-        if (not hasNextByte) {
-          break l;
+  public func decodeNat(bytes : Iter.Iter<Nat8>, encoding : { #unsignedLEB128; #lsb; #msb }) : ?Nat {
+    switch (encoding) {
+      case (#lsb) decodeNatClassic(bytes, #lsb);
+      case (#msb) decodeNatClassic(bytes, #msb);
+      case (#unsignedLEB128) do ? {
+        var v : Nat = 0;
+        var i : Nat = 0;
+        label l loop {
+          let byte : Nat8 = bytes.next()!;
+          v += Nat8.toNat(byte & 0x7f) * Nat.pow(2, 7 * i); // Shift over 7 * i bits to get value to add, ignore first bit
+          i += 1;
+          let hasNextByte = (byte & 0x80) == 0x80; // If starts with a 1, there is another byte
+          if (not hasNextByte) {
+            break l;
+          };
         };
+        v;
       };
-      v;
     };
   };
 
@@ -541,5 +545,30 @@ module {
     let bits = Util.natToPaddedBitsLSB(value);
     let bytes = Util.bitsLSBToBytesLSB(bits);
     Util.writeBytes(buffer, bytes, encoding);
+  };
+
+  private func decodeNatClassic(bytesIter : Iter.Iter<Nat8>, encoding : { #lsb; #msb }) : ?Nat {
+    // Use helper to read bytes
+    let bytesOpt = Util.readAllBytes(bytesIter);
+
+    let bytes = switch (bytesOpt) {
+      case (?b) b;
+      case (null) return null;
+    };
+
+    // Handle all zero bytes case -> 0
+    var allZero = true;
+    label f for (b in bytes.vals()) {
+      if (b != 0) { allZero := false; break f };
+    };
+    if (allZero) return ?0;
+
+    // Use helper to get LSB bits
+    let bits = Util.bytesToBitsLSB(bytes, encoding);
+
+    // Nat Specific: No sign check needed. Convert directly.
+    // Optional: Trim leading zeros from bits if needed (bitsLSBToNat should handle it)
+
+    return ?Util.bitsLSBToNat(bits);
   };
 };

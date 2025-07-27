@@ -570,7 +570,7 @@ module {
 
     // Int specific: Apply reverse two's complement if negative
     if (isNegative) {
-      bits := Util.reverseTwosCompliment(bits); // Assumes Util.reverseTwosCompliment exists
+      bits := Util.reverseTwosCompliment(bits);
     };
 
     // Use helper to convert (potentially positive-ified) bits to Nat

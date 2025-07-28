@@ -46,6 +46,18 @@ Encodes a `FloatX` to bytes buffer
 
 Decodes a `FloatX` from an iteration of bytes. If null is returned, then there was an error decoding or an unexpected end of bytes
 
+`isNaN(fX: FloatX) : Bool`
+
+Returns `true` if the `FloatX` value represents NaN (Not a Number), `false` otherwise
+
+`isPosInf(fX: FloatX) : Bool`
+
+Returns `true` if the `FloatX` value represents positive infinity, `false` otherwise
+
+`isNegInf(fX: FloatX) : Bool`
+
+Returns `true` if the `FloatX` value represents negative infinity, `false` otherwise
+
 ## IntX
 
 `toText(value : Int) : Text`

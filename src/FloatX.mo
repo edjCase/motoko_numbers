@@ -28,7 +28,7 @@ module {
   /// ```
   public func nearlyEqual(a : Float, b : Float, relativeTolerance : Float, absoluteTolerance : Float) : Bool {
     let maxAbsoluteValue : Float = Float.max(Float.abs(a), Float.abs(b));
-    Float.abs(a -b) <= Float.max(relativeTolerance * maxAbsoluteValue, absoluteTolerance);
+    Float.abs(a - b) <= Float.max(relativeTolerance * maxAbsoluteValue, absoluteTolerance);
   };
 
   /// Converts a `Float` to a `FloatX` with the specified precision.
@@ -39,15 +39,48 @@ module {
   /// ```
   public func fromFloat(float : Float, precision : FloatPrecision) : FloatX {
     let bitInfo : PrecisionBitInfo = getPrecisionBitInfo(precision);
-    if (float == 0.0) {
+    let isNegative = Float.copySign(1.0, float) < 0;
+
+    // Handle special values first
+    if (Float.isNaN(float)) {
+      return {
+        precision = precision;
+        isNegative = isNegative;
+        exponent = ?getExponentWithAllOnes(bitInfo); // all 1s
+        // TODO unable to get mantissa from NaN Float, so put in 1 as default
+        mantissa = 1; // non-zero mantissa indicates NaN
+      };
+    };
+
+    // Check for infinity
+    if (float == (1.0 / 0.0)) {
+      // +inf
       return {
         precision = precision;
         isNegative = false;
+        exponent = ?getExponentWithAllOnes(bitInfo); // all 1s
+        mantissa = 0; // zero mantissa indicates infinity
+      };
+    };
+
+    if (float == (-1.0 / 0.0)) {
+      // -inf
+      return {
+        precision = precision;
+        isNegative = true;
+        exponent = ?getExponentWithAllOnes(bitInfo); // all 1s
+        mantissa = 0; // zero mantissa indicates infinity
+      };
+    };
+
+    if (float == 0.0) {
+      return {
+        precision = precision;
+        isNegative = isNegative;
         exponent = null;
         mantissa = 0;
       };
     };
-    let isNegative = float < 0;
 
     // maxMantissa = 2 ^ mantissaBitLength
     // e = 2^exponent * (x + mantissa/maxMantissa)
@@ -68,8 +101,7 @@ module {
       // If smaller than 2^minExponent then x is 0
       // e is 2^exponent + (number less than 1)
       // exponent is min value
-      var a = null; // TODO bug where this cant be a const
-      (a, 0);
+      (null, 0);
     };
 
     // m = (|float|/2^exponent) - x
@@ -90,7 +122,6 @@ module {
       mantissa = mantissa;
     };
   };
-
   /// Converts a `FloatX` to a `Float`.
   ///
   /// ```motoko
@@ -104,6 +135,18 @@ module {
   /// ```
   public func toFloat(fX : FloatX) : Float {
     let bitInfo : PrecisionBitInfo = getPrecisionBitInfo(fX.precision);
+
+    // Handle special values
+    let all1sValue : Int = getExponentWithAllOnes(bitInfo);
+    if (fX.exponent == ?all1sValue) {
+      if (fX.mantissa == 0) {
+        // Infinity
+        return if (fX.isNegative) (-1.0 / 0.0) else (1.0 / 0.0);
+      } else {
+        // NaN
+        return (0.0 / 0.0);
+      };
+    };
 
     // e = 2^exponent * (x + mantissa/maxMantissa)
     // float = sign * e
@@ -208,6 +251,49 @@ module {
       };
     };
   };
+  /// Checks if a `FloatX` represents NaN (Not a Number).
+  ///
+  /// ```motoko
+  /// let floatX : FloatX = fromFloat(0.0/0.0, #f32);
+  /// let result = isNaN(floatX);
+  /// // result is true
+  /// ```
+  public func isNaN(fX : FloatX) : Bool {
+    switch (fX.exponent) {
+      case (?exp) fX.mantissa != 0 and exp == getExponentWithAllOnes(getPrecisionBitInfo(fX.precision));
+      case (null) false;
+    };
+  };
+
+  /// Checks if a `FloatX` represents positive infinity.
+  ///
+  /// ```motoko
+  /// let posInf : FloatX = fromFloat(1.0/0.0, #f32);
+  /// let negInf : FloatX = fromFloat(-1.0/0.0, #f32);
+  /// let result1 = isPosInf(posInf); // true
+  /// let result2 = isPosInf(negInf); // false
+  /// ```
+  public func isPosInf(fX : FloatX) : Bool {
+    switch (fX.exponent) {
+      case (?exp) fX.mantissa == 0 and not fX.isNegative and exp == getExponentWithAllOnes(getPrecisionBitInfo(fX.precision));
+      case (null) false;
+    };
+  };
+
+  /// Checks if a `FloatX` represents negative infinity.
+  ///
+  /// ```motoko
+  /// let posInf : FloatX = fromFloat(1.0/0.0, #f32);
+  /// let negInf : FloatX = fromFloat(-1.0/0.0, #f32);
+  /// let result1 = isNegInf(posInf); // false
+  /// let result2 = isNegInf(negInf); // true
+  /// ```
+  public func isNegInf(fX : FloatX) : Bool {
+    switch (fX.exponent) {
+      case (?exp) fX.mantissa == 0 and fX.isNegative and exp == getExponentWithAllOnes(getPrecisionBitInfo(fX.precision));
+      case (null) false;
+    };
+  };
 
   private func calculateExponent(value : Float, exponent : Float) : Float {
     if (exponent < 0) {
@@ -246,6 +332,10 @@ module {
       maxMantissaDenomiator = 2 ** mantissaBitLength;
       smallestNormalNumber = smallestNormalNumber;
     };
+  };
+
+  private func getExponentWithAllOnes(bitInfo : PrecisionBitInfo) : Int {
+    2 ** bitInfo.exponentBitLength - 1 - bitInfo.maxExponent; // all 1s
   };
 
 };

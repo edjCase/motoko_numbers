@@ -33,20 +33,20 @@ func testToTextInternal(value : Nat, expected : Text, base : NatX.Format) {
 };
 
 func testNat8(bytes : [Nat8], expected : Nat8) {
-  testNatX(NatX.decodeNat8, encodeNat8, Nat8.equal, Nat8.toText, bytes, expected);
+  testNatX(NatX.fromNat8Bytes, toNat8BytesBuffer, Nat8.equal, Nat8.toText, bytes, expected);
 };
 func testNat16(bytes : [Nat8], expected : Nat16) {
-  testNatX(NatX.decodeNat16, NatX.encodeNat16, Nat16.equal, Nat16.toText, bytes, expected);
+  testNatX(NatX.fromNat16Bytes, NatX.toNat16BytesBuffer, Nat16.equal, Nat16.toText, bytes, expected);
 };
 func testNat32(bytes : [Nat8], expected : Nat32) {
-  testNatX(NatX.decodeNat32, NatX.encodeNat32, Nat32.equal, Nat32.toText, bytes, expected);
+  testNatX(NatX.fromNat32Bytes, NatX.toNat32BytesBuffer, Nat32.equal, Nat32.toText, bytes, expected);
 };
 func testNat64(bytes : [Nat8], expected : Nat64) {
-  testNatX(NatX.decodeNat64, NatX.encodeNat64, Nat64.equal, Nat64.toText, bytes, expected);
+  testNatX(NatX.fromNat64Bytes, NatX.toNat64BytesBuffer, Nat64.equal, Nat64.toText, bytes, expected);
 };
 
 func testNat(bytes : [Nat8], expected : Nat, encoding : { #unsignedLEB128; #lsb; #msb }) {
-  let actual : ?Nat = NatX.decodeNat(Iter.fromArray(bytes), encoding);
+  let actual : ?Nat = NatX.fromNatBytes(Iter.fromArray(bytes), encoding);
   switch (actual) {
     case (null) Runtime.trap("Unable to parse nat from bytes: " # Util.toHexString(bytes));
     case (?a) {
@@ -54,7 +54,7 @@ func testNat(bytes : [Nat8], expected : Nat, encoding : { #unsignedLEB128; #lsb;
         Runtime.trap("Expected: " # Nat.toText(expected) # "\nActual: " # Nat.toText(a) # "\nBytes: " # Util.toHexString(bytes));
       };
       let buffer = List.empty<Nat8>();
-      NatX.encodeNat(Buffer.fromList(buffer), expected, encoding);
+      NatX.toNatBytesBuffer(Buffer.fromList(buffer), expected, encoding);
       let expectedBytes : [Nat8] = List.toArray(buffer);
       if (not TestUtil.bytesAreEqual(bytes, expectedBytes)) {
         Runtime.trap("Expected Bytes: " # Util.toHexString(expectedBytes) # "\nActual Bytes: " # Util.toHexString(bytes));
@@ -63,8 +63,8 @@ func testNat(bytes : [Nat8], expected : Nat, encoding : { #unsignedLEB128; #lsb;
   };
 };
 
-func encodeNat8(buffer : Buffer.Buffer<Nat8>, value : Nat8, _ : { #lsb; #msb }) {
-  NatX.encodeNat8(buffer, value);
+func toNat8BytesBuffer(buffer : Buffer.Buffer<Nat8>, value : Nat8, _ : { #lsb; #msb }) {
+  NatX.toNat8BytesBuffer(buffer, value);
 };
 
 func testNatX<T>(

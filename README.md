@@ -40,24 +40,28 @@ switch (hexValue) {
 ### Example 2: Binary Encoding
 
 ```motoko
-import FloatX "mo:xtended-numbers/FloatX";
 import IntX "mo:xtended-numbers/IntX";
 import Buffer "mo:buffer";
 
-// Encode float to binary buffer
-let list = List.empty<Nat8>();
-let buffer = Buffer.fromList(list);
-let float32Value = FloatX.fromFloat(3.14159, #f32);
-FloatX.encode(buffer, float32Value, #lsb); // Little-endian encoding
-
-// Encode integer to buffer
+// Encode integer to array
 let int32Value : Int32 = 42;
-IntX.encodeInt32(buffer, int32Value, #msb); // Big-endian encoding
+let intBytes = IntX.toInt32Bytes(int32Value, #msb); // Big-endian encoding
 
-Debug.print("Encoded bytes: " # debug_show(List.toArray(list)));
+Debug.print("Bytes: " # debug_show(intBytes));
 ```
 
-### Example 3: Type Conversions
+### Example 3: Binary Encoding to Buffer
+
+```motoko
+let list = List.empty<Nat8>();
+let buffer = Buffer.fromList(list);
+// Encode integer to buffer
+IntX.toInt32BytesBuffer(buffer, int32Value, #msb); // Big-endian encoding
+
+Debug.print("Bytes: " # debug_show(List.toArray(list)));
+```
+
+### Example 4: Type Conversions
 
 ```motoko
 import IntX "mo:xtended-numbers/IntX";
@@ -78,7 +82,7 @@ let nat32Value = NatX.from64To32(natValue);
 Debug.print("Converted chain: " # Int8.toText(int8Value));
 ```
 
-### Example 4: Float Precision Conversion
+### Example 5: Float Precision Conversion
 
 ```motoko
 import FloatX "mo:xtended-numbers/FloatX";
@@ -121,8 +125,9 @@ public func isPosInf(fX: FloatX) : Bool;
 public func isNegInf(fX: FloatX) : Bool;
 
 // Binary encoding
-public func encode(buffer: Buffer.Buffer<Nat8>, value: FloatX, encoding: {#lsb; #msb});
-public func decode(bytes: Iter.Iter<Nat8>, precision: {#f16; #f32; #f64}, encoding: {#lsb; #msb}) : ?FloatX;
+public func toBytes(value: FloatX, encoding: {#lsb; #msb}) : [Nat8];
+public func toBytesBuffer(buffer: Buffer.Buffer<Nat8>, value: FloatX, encoding: {#lsb; #msb});
+public func fromBytes(bytes: Iter.Iter<Nat8>, precision: {#f16; #f32; #f64}, encoding: {#lsb; #msb}) : ?FloatX;
 ```
 
 ### IntX Module
@@ -143,8 +148,11 @@ public func from32To16(value: Int32) : Int16;
 public func from16To8(value: Int16) : Int8;
 
 // Binary encoding
-public func encodeInt32(buffer: Buffer.Buffer<Nat8>, value: Int32, encoding: {#lsb; #msb});
-public func decodeInt32(bytes: Iter.Iter<Nat8>, encoding: {#lsb; #msb}) : ?Int32;
+public func toIntBytes(value: Int, encoding: {#signedLEB128; #lsb; #msb}) : [Nat8];
+public func toIntBytesBuffer(buffer: Buffer.Buffer<Nat8>, value: Int, encoding: {#signedLEB128; #lsb; #msb});
+public func toInt32Bytes(value: Int32, encoding: {#lsb; #msb}) : [Nat8];
+public func toInt32BytesBuffer(buffer: Buffer.Buffer<Nat8>, value: Int32, encoding: {#lsb; #msb});
+public func fromInt32Bytes(bytes: Iter.Iter<Nat8>, encoding: {#lsb; #msb}) : ?Int32;
 ```
 
 ### NatX Module
@@ -154,7 +162,11 @@ public func decodeInt32(bytes: Iter.Iter<Nat8>, encoding: {#lsb; #msb}) : ?Int32
 public func toText(value : Nat) : Text;
 public func fromText(value : Text) : ?Nat;
 public func from64To32(value: Nat64) : Nat32;
-public func encodeNat32(buffer: Buffer.Buffer<Nat8>, value: Nat32, encoding: {#lsb; #msb});
+public func toNatBytes(value: Nat, encoding: {#unsignedLEB128; #lsb; #msb}) : [Nat8];
+public func toNatBytesBuffer(buffer: Buffer.Buffer<Nat8>, value: Nat, encoding: {#unsignedLEB128; #lsb; #msb});
+public func toNat32Bytes(value: Nat32, encoding: {#lsb; #msb}) : [Nat8];
+public func toNat32BytesBuffer(buffer: Buffer.Buffer<Nat8>, value: Nat32, encoding: {#lsb; #msb});
+public func fromNat32Bytes(bytes: Iter.Iter<Nat8>, encoding: {#lsb; #msb}) : ?Nat32;
 // ... (full API similar to IntX)
 ```
 

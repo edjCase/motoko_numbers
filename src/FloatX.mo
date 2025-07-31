@@ -3,6 +3,7 @@ import Float "mo:core/Float";
 import Int "mo:core/Int";
 import Int64 "mo:core/Int64";
 import Iter "mo:core/Iter";
+import List "mo:core/List";
 import Nat "mo:core/Nat";
 import Nat64 "mo:core/Nat64";
 import NatX "./NatX";
@@ -162,14 +163,27 @@ module {
     sign * expValue * (Float.fromInt(x) + Float.fromInt(fX.mantissa) / Float.fromInt(bitInfo.maxMantissaDenomiator));
   };
 
+  /// Encodes a `FloatX` to a byte array.
+  ///
+  /// ```motoko
+  /// let floatX : FloatX = fromFloat(3.14159, #f32);
+  /// let bytes = toBytes(floatX, #lsb);
+  /// ```
+  public func toBytes(value : FloatX, encoding : { #lsb; #msb }) : [Nat8] {
+    let list = List.empty<Nat8>();
+    let buffer = Buffer.fromList(list);
+    toBytesBuffer(buffer, value, encoding);
+    List.toArray(list);
+  };
+
   /// Encodes a `FloatX` to a byte buffer.
   ///
   /// ```motoko
   /// let floatX : FloatX = fromFloat(3.14159, #f32);
   /// let buffer = Buffer.Buffer<Nat8>(4);
-  /// encode(buffer, floatX, #lsb);
+  /// toBytesBuffer(buffer, floatX, #lsb);
   /// ```
-  public func encode(buffer : Buffer.Buffer<Nat8>, value : FloatX, encoding : { #lsb; #msb }) {
+  public func toBytesBuffer(buffer : Buffer.Buffer<Nat8>, value : FloatX, encoding : { #lsb; #msb }) {
     var bits : Nat64 = 0;
     if (value.isNegative) {
       bits |= 0x01;
@@ -189,14 +203,14 @@ module {
     switch (value.precision) {
       case (#f16) {
         let nat16 = NatX.from64To16(bits);
-        NatX.encodeNat16(buffer, nat16, encoding);
+        NatX.toNat16BytesBuffer(buffer, nat16, encoding);
       };
       case (#f32) {
         let nat32 = NatX.from64To32(bits);
-        NatX.encodeNat32(buffer, nat32, encoding);
+        NatX.toNat32BytesBuffer(buffer, nat32, encoding);
       };
       case (#f64) {
-        NatX.encodeNat64(buffer, bits, encoding);
+        NatX.toNat64BytesBuffer(buffer, bits, encoding);
       };
     };
   };
@@ -205,18 +219,18 @@ module {
   ///
   /// ```motoko
   /// let bytes : [Nat8] = [64, 73, 15, 219]; // Encoded bytes for 3.14159 (f32)
-  /// let result = decode(bytes.vals(), #f32, #lsb);
+  /// let result = fromBytes(bytes.vals(), #f32, #lsb);
   /// switch (result) {
   ///   case (null) { /* Handle decoding error */ };
   ///   case (?floatX) { /* Use decoded FloatX */ };
   /// };
   /// ```
-  public func decode(bytes : Iter.Iter<Nat8>, precision : { #f16; #f32; #f64 }, encoding : { #lsb; #msb }) : ?FloatX {
+  public func fromBytes(bytes : Iter.Iter<Nat8>, precision : { #f16; #f32; #f64 }, encoding : { #lsb; #msb }) : ?FloatX {
     do ? {
       let bits : Nat64 = switch (precision) {
-        case (#f16) NatX.from16To64(NatX.decodeNat16(bytes, encoding)!);
-        case (#f32) NatX.from32To64(NatX.decodeNat32(bytes, encoding)!);
-        case (#f64) NatX.decodeNat64(bytes, encoding)!;
+        case (#f16) NatX.from16To64(NatX.fromNat16Bytes(bytes, encoding)!);
+        case (#f32) NatX.from32To64(NatX.fromNat32Bytes(bytes, encoding)!);
+        case (#f64) NatX.fromNat64Bytes(bytes, encoding)!;
       };
       let bitInfo : PrecisionBitInfo = getPrecisionBitInfo(precision);
       if (bits == 0) {

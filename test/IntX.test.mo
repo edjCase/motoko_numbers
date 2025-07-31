@@ -33,20 +33,20 @@ func testToTextInternal(value : Int, expected : Text, base : IntX.Format) {
 };
 
 func testInt8(bytes : [Nat8], expected : Int8) {
-  testIntX(IntX.decodeInt8, encodeInt8, Int8.equal, Int8.toText, bytes, expected);
+  testIntX(IntX.fromInt8Bytes, toInt8BytesBuffer, Int8.equal, Int8.toText, bytes, expected);
 };
 func testInt16(bytes : [Nat8], expected : Int16) {
-  testIntX(IntX.decodeInt16, IntX.encodeInt16, Int16.equal, Int16.toText, bytes, expected);
+  testIntX(IntX.fromInt16Bytes, IntX.toInt16BytesBuffer, Int16.equal, Int16.toText, bytes, expected);
 };
 func testInt32(bytes : [Nat8], expected : Int32) {
-  testIntX(IntX.decodeInt32, IntX.encodeInt32, Int32.equal, Int32.toText, bytes, expected);
+  testIntX(IntX.fromInt32Bytes, IntX.toInt32BytesBuffer, Int32.equal, Int32.toText, bytes, expected);
 };
 func testInt64(bytes : [Nat8], expected : Int64) {
-  testIntX(IntX.decodeInt64, IntX.encodeInt64, Int64.equal, Int64.toText, bytes, expected);
+  testIntX(IntX.fromInt64Bytes, IntX.toInt64BytesBuffer, Int64.equal, Int64.toText, bytes, expected);
 };
 
 func testInt(bytes : [Nat8], expected : Int, encoding : { #signedLEB128; #lsb; #msb }) {
-  let actual : ?Int = IntX.decodeInt(Iter.fromArray(bytes), encoding);
+  let actual : ?Int = IntX.fromIntBytes(Iter.fromArray(bytes), encoding);
   switch (actual) {
     case (null) Runtime.trap("Unable to parse Int from bytes: " # Util.toHexString(bytes));
     case (?a) {
@@ -54,7 +54,7 @@ func testInt(bytes : [Nat8], expected : Int, encoding : { #signedLEB128; #lsb; #
         Runtime.trap("\nExpected: " # Int.toText(expected) # "\nActual:   " # Int.toText(a) # "\nBytes: " # Util.toHexString(bytes));
       };
       let buffer = List.empty<Nat8>();
-      IntX.encodeInt(Buffer.fromList(buffer), expected, encoding);
+      IntX.toIntBytesBuffer(Buffer.fromList(buffer), expected, encoding);
       let actualBytes : [Nat8] = List.toArray(buffer);
       if (not TestUtil.bytesAreEqual(bytes, actualBytes)) {
         Runtime.trap("\nInt Value: " # Int.toText(expected) # "\nEncoding: " #debug_show (encoding) # "\nExpected Bytes: " # Util.toHexString(bytes) # "\nActual Bytes: " # Util.toHexString(actualBytes));
@@ -63,8 +63,8 @@ func testInt(bytes : [Nat8], expected : Int, encoding : { #signedLEB128; #lsb; #
   };
 };
 
-func encodeInt8(buffer : Buffer.Buffer<Nat8>, value : Int8, _ : { #lsb; #msb }) {
-  IntX.encodeInt8(buffer, value);
+func toInt8BytesBuffer(buffer : Buffer.Buffer<Nat8>, value : Int8, _ : { #lsb; #msb }) {
+  IntX.toInt8BytesBuffer(buffer, value);
 };
 
 func testIntX<T>(

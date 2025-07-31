@@ -12,7 +12,7 @@ func testFloat(bytes : [Nat8], expected : Float) {
     case (8) #f64;
     case (_) Runtime.trap("Invalid byte size: " # debug_show (bytes.size()));
   };
-  let actualFX = FloatX.decode(bytes.vals(), precision, #msb);
+  let actualFX = FloatX.fromBytes(bytes.vals(), precision, #msb);
   let expectedFX = FloatX.fromFloat(expected, precision);
   switch (actualFX) {
     case (null) Runtime.trap("Invalid bytes for float: " # debug_show (bytes));

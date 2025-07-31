@@ -5,6 +5,7 @@ import Int32 "mo:core/Int32";
 import Int64 "mo:core/Int64";
 import Int8 "mo:core/Int8";
 import Iter "mo:core/Iter";
+import List "mo:core/List";
 import Nat64 "mo:core/Nat64";
 import Nat8 "mo:core/Nat8";
 import Nat "mo:core/Nat";
@@ -12,7 +13,6 @@ import Array "mo:core/Array";
 import NatX "./NatX";
 import Util "./Util";
 import Text "mo:core/Text";
-import List "mo:core/List";
 
 module {
   public type Format = NatX.Format;
@@ -254,14 +254,27 @@ module {
     Int8.toInt(value);
   };
 
+  /// Encodes an Int to a byte array using the specified encoding.
+  ///
+  /// ```motoko
+  /// let bytes = IntX.toIntBytes(-123, #signedLEB128);
+  /// // bytes contains the encoded bytes
+  /// ```
+  public func toIntBytes(value : Int, encoding : { #signedLEB128; #msb; #lsb }) : [Nat8] {
+    let list = List.empty<Nat8>();
+    let buffer = Buffer.fromList(list);
+    toIntBytesBuffer(buffer, value, encoding);
+    List.toArray(list);
+  };
+
   /// Encodes an Int to a byte buffer using the specified encoding.
   ///
   /// ```motoko
   /// let buffer = Buffer.Buffer<Nat8>(8);
-  /// IntX.encodeInt(buffer, -123, #signedLEB128);
+  /// IntX.toIntBytesBuffer(buffer, -123, #signedLEB128);
   /// // buffer now contains the encoded bytes
   /// ```
-  public func encodeInt(buffer : Buffer.Buffer<Nat8>, value : Int, encoding : { #signedLEB128; #msb; #lsb }) {
+  public func toIntBytesBuffer(buffer : Buffer.Buffer<Nat8>, value : Int, encoding : { #signedLEB128; #msb; #lsb }) {
     switch (encoding) {
       case (#msb) encodeIntClassic(buffer, value, #msb);
       case (#lsb) encodeIntClassic(buffer, value, #lsb);
@@ -288,65 +301,122 @@ module {
     };
   };
 
+  /// Encodes an Int to a byte buffer using the specified encoding.
+  /// Encodes an Int8 to a byte array.
+  ///
+  /// ```motoko
+  /// let bytes = IntX.toInt8Bytes(-123);
+  /// // bytes contains the encoded byte
+  /// ```
+  public func toInt8Bytes(value : Int8) : [Nat8] {
+    let list = List.empty<Nat8>();
+    let buffer = Buffer.fromList(list);
+    toInt8BytesBuffer(buffer, value);
+    List.toArray(list);
+  };
+
   /// Encodes an Int8 to a byte buffer.
   ///
   /// ```motoko
   /// let buffer = Buffer.Buffer<Nat8>(1);
-  /// IntX.encodeInt8(buffer, -123);
+  /// IntX.toInt8BytesBuffer(buffer, -123);
   /// // buffer now contains the encoded byte
   /// ```
-  public func encodeInt8(buffer : Buffer.Buffer<Nat8>, value : Int8) {
+  public func toInt8BytesBuffer(buffer : Buffer.Buffer<Nat8>, value : Int8) {
     buffer.write(Int8.toNat8(value));
+  };
+
+  /// Encodes an Int8 to a byte buffer.
+  /// Encodes an Int16 to a byte array.
+  ///
+  /// ```motoko
+  /// let bytes = IntX.toInt16Bytes(-12345, #lsb);
+  /// // bytes contains the encoded bytes
+  /// ```
+  public func toInt16Bytes(value : Int16, encoding : { #lsb; #msb }) : [Nat8] {
+    let list = List.empty<Nat8>();
+    let buffer = Buffer.fromList(list);
+    toInt16BytesBuffer(buffer, value, encoding);
+    List.toArray(list);
   };
 
   /// Encodes an Int16 to a byte buffer.
   ///
   /// ```motoko
   /// let buffer = Buffer.Buffer<Nat8>(2);
-  /// IntX.encodeInt16(buffer, -12345, #lsb);
+  /// IntX.toInt16BytesBuffer(buffer, -12345, #lsb);
   /// // buffer now contains the encoded bytes
   /// ```
-  public func encodeInt16(buffer : Buffer.Buffer<Nat8>, value : Int16, encoding : { #lsb; #msb }) {
+  public func toInt16BytesBuffer(buffer : Buffer.Buffer<Nat8>, value : Int16, encoding : { #lsb; #msb }) {
     encodeIntX(buffer, Int64.fromInt(Int16.toInt(value)), encoding, #b16);
+  };
+
+  /// Encodes an Int16 to a byte buffer.
+  /// Encodes an Int32 to a byte array.
+  ///
+  /// ```motoko
+  /// let bytes = IntX.toInt32Bytes(-1234567890, #lsb);
+  /// // bytes contains the encoded bytes
+  /// ```
+  public func toInt32Bytes(value : Int32, encoding : { #lsb; #msb }) : [Nat8] {
+    let list = List.empty<Nat8>();
+    let buffer = Buffer.fromList(list);
+    toInt32BytesBuffer(buffer, value, encoding);
+    List.toArray(list);
   };
 
   /// Encodes an Int32 to a byte buffer.
   ///
   /// ```motoko
   /// let buffer = Buffer.Buffer<Nat8>(4);
-  /// IntX.encodeInt32(buffer, -1234567890, #lsb);
+  /// IntX.toInt32BytesBuffer(buffer, -1234567890, #lsb);
   /// // buffer now contains the encoded bytes
   /// ```
-  public func encodeInt32(buffer : Buffer.Buffer<Nat8>, value : Int32, encoding : { #lsb; #msb }) {
+  public func toInt32BytesBuffer(buffer : Buffer.Buffer<Nat8>, value : Int32, encoding : { #lsb; #msb }) {
     encodeIntX(buffer, Int64.fromInt(Int32.toInt(value)), encoding, #b32);
+  };
+
+  /// Encodes an Int32 to a byte buffer.
+  /// Encodes an Int64 to a byte array.
+  ///
+  /// ```motoko
+  /// let bytes = IntX.toInt64Bytes(-1234567890123456789, #lsb);
+  /// // bytes contains the encoded bytes
+  /// ```
+  public func toInt64Bytes(value : Int64, encoding : { #lsb; #msb }) : [Nat8] {
+    let list = List.empty<Nat8>();
+    let buffer = Buffer.fromList(list);
+    toInt64BytesBuffer(buffer, value, encoding);
+    List.toArray(list);
   };
 
   /// Encodes an Int64 to a byte buffer.
   ///
   /// ```motoko
   /// let buffer = Buffer.Buffer<Nat8>(8);
-  /// IntX.encodeInt64(buffer, -1234567890123456789, #lsb);
+  /// IntX.toInt64BytesBuffer(buffer, -1234567890123456789, #lsb);
   /// // buffer now contains the encoded bytes
   /// ```
-  public func encodeInt64(buffer : Buffer.Buffer<Nat8>, value : Int64, encoding : { #lsb; #msb }) {
+  public func toInt64BytesBuffer(buffer : Buffer.Buffer<Nat8>, value : Int64, encoding : { #lsb; #msb }) {
     encodeIntX(buffer, Int64.fromInt(Int64.toInt(value)), encoding, #b64);
   };
 
+  /// Encodes an Int64 to a byte buffer.
   /// Decodes an Int from a byte iterator using signed LEB128 encoding.
   ///
   /// ```motoko
   /// let bytes : [Nat8] = [0xc6, 0xf5, 0x08]; // -123456 in signed LEB128
-  /// let result = IntX.decodeInt(bytes.vals(), #signedLEB128);
+  /// let result = IntX.fromIntBytes(bytes.vals(), #signedLEB128);
   /// switch (result) {
   ///   case (null) { /* Decoding error */ };
   ///   case (?value) { /* value is -123456 */ };
   /// };
   /// ```
-  public func decodeInt(bytes : Iter.Iter<Nat8>, encoding : { #signedLEB128; #lsb; #msb }) : ?Int {
+  public func fromIntBytes(bytes : Iter.Iter<Nat8>, encoding : { #signedLEB128; #lsb; #msb }) : ?Int {
     do ? {
       switch (encoding) {
-        case (#msb) return decodeIntClassic(bytes, #msb);
-        case (#lsb) return decodeIntClassic(bytes, #lsb);
+        case (#msb) return fromIntClassicBytes(bytes, #msb);
+        case (#lsb) return fromIntClassicBytes(bytes, #lsb);
         case (#signedLEB128) {
           var bits : [Bool] = Util.invariableLengthBytesDecode(bytes);
           let isNegative = bits[bits.size() - 1];
@@ -381,15 +451,15 @@ module {
   ///
   /// ```motoko
   /// let bytes : [Nat8] = [0x85]; // -123 in two's complement
-  /// let result = IntX.decodeInt8(bytes.vals(), #lsb);
+  /// let result = IntX.fromInt8Bytes(bytes.vals(), #lsb);
   /// switch (result) {
   ///   case (null) { /* Decoding error */ };
   ///   case (?value) { /* value is -123 */ };
   /// };
   /// ```
-  public func decodeInt8(bytes : Iter.Iter<Nat8>, encoding : { #lsb; #msb }) : ?Int8 {
+  public func fromInt8Bytes(bytes : Iter.Iter<Nat8>, encoding : { #lsb; #msb }) : ?Int8 {
     do ? {
-      let bits : [Bool] = decodeIntX(bytes, encoding, #b8)!;
+      let bits : [Bool] = fromIntXBytes(bytes, encoding, #b8)!;
       bitsToInt<Int8>(bits, 0, Int8.bitset);
     };
   };
@@ -398,15 +468,15 @@ module {
   ///
   /// ```motoko
   /// let bytes : [Nat8] = [0x30, 0xcf]; // -12496 in little-endian
-  /// let result = IntX.decodeInt16(bytes.vals(), #lsb);
+  /// let result = IntX.fromInt16Bytes(bytes.vals(), #lsb);
   /// switch (result) {
   ///   case (null) { /* Decoding error */ };
   ///   case (?value) { /* value is -12496 */ };
   /// };
   /// ```
-  public func decodeInt16(bytes : Iter.Iter<Nat8>, encoding : { #lsb; #msb }) : ?Int16 {
+  public func fromInt16Bytes(bytes : Iter.Iter<Nat8>, encoding : { #lsb; #msb }) : ?Int16 {
     do ? {
-      let bits : [Bool] = decodeIntX(bytes, encoding, #b16)!;
+      let bits : [Bool] = fromIntXBytes(bytes, encoding, #b16)!;
       bitsToInt<Int16>(bits, 0, Int16.bitset);
     };
   };
@@ -415,15 +485,15 @@ module {
   ///
   /// ```motoko
   /// let bytes : [Nat8] = [0x2e, 0xf3, 0xff, 0xff]; // -3282 in little-endian
-  /// let result = IntX.decodeInt32(bytes.vals(), #lsb);
+  /// let result = IntX.fromInt32Bytes(bytes.vals(), #lsb);
   /// switch (result) {
   ///   case (null) { /* Decoding error */ };
   ///   case (?value) { /* value is -3282 */ };
   /// };
   /// ```
-  public func decodeInt32(bytes : Iter.Iter<Nat8>, encoding : { #lsb; #msb }) : ?Int32 {
+  public func fromInt32Bytes(bytes : Iter.Iter<Nat8>, encoding : { #lsb; #msb }) : ?Int32 {
     do ? {
-      let bits : [Bool] = decodeIntX(bytes, encoding, #b32)!;
+      let bits : [Bool] = fromIntXBytes(bytes, encoding, #b32)!;
       bitsToInt<Int32>(bits, 0, Int32.bitset);
     };
   };
@@ -432,20 +502,20 @@ module {
   ///
   /// ```motoko
   /// let bytes : [Nat8] = [0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x7f]; // 9223372036854775807 in little-endian
-  /// let result = IntX.decodeInt64(bytes.vals(), #lsb);
+  /// let result = IntX.fromInt64Bytes(bytes.vals(), #lsb);
   /// switch (result) {
   ///   case (null) { /* Decoding error */ };
   ///   case (?value) { /* value is 9223372036854775807 */ };
   /// };
   /// ```
-  public func decodeInt64(bytes : Iter.Iter<Nat8>, encoding : { #lsb; #msb }) : ?Int64 {
+  public func fromInt64Bytes(bytes : Iter.Iter<Nat8>, encoding : { #lsb; #msb }) : ?Int64 {
     do ? {
-      let bits : [Bool] = decodeIntX(bytes, encoding, #b64)!;
+      let bits : [Bool] = fromIntXBytes(bytes, encoding, #b64)!;
       bitsToInt<Int64>(bits, 0, Int64.bitset);
     };
   };
 
-  private func decodeIntX(bytes : Iter.Iter<Nat8>, encoding : { #lsb; #msb }, size : { #b8; #b16; #b32; #b64 }) : ?[Bool] {
+  private func fromIntXBytes(bytes : Iter.Iter<Nat8>, encoding : { #lsb; #msb }, size : { #b8; #b16; #b32; #b64 }) : ?[Bool] {
     do ? {
       let byteLength : Nat64 = getByteLength(size);
       var nat64 : Nat64 = 0;
@@ -547,7 +617,7 @@ module {
 
   /// Decodes an arbitrary precision Int using MSB or LSB classic two's complement.
   /// Reads all bytes from the iterator.
-  private func decodeIntClassic(bytesIter : Iter.Iter<Nat8>, encoding : { #lsb; #msb }) : ?Int {
+  private func fromIntClassicBytes(bytesIter : Iter.Iter<Nat8>, encoding : { #lsb; #msb }) : ?Int {
     // Use helper to read bytes
     let bytesOpt = Util.readAllBytes(bytesIter);
     let bytes = switch (bytesOpt) {

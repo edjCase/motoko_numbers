@@ -336,14 +336,27 @@ module {
     Nat8.toNat(value);
   };
 
+  /// Encodes a Nat to a byte array using unsigned LEB128 encoding.
+  ///
+  /// ```motoko
+  /// let bytes = NatX.toNatBytes(123, #unsignedLEB128);
+  /// // bytes contains the encoded bytes
+  /// ```
+  public func toNatBytes(value : Nat, encoding : { #unsignedLEB128; #lsb; #msb }) : [Nat8] {
+    let list = List.empty<Nat8>();
+    let buffer = Buffer.fromList(list);
+    toNatBytesBuffer(buffer, value, encoding);
+    List.toArray(list);
+  };
+
   /// Encodes a Nat to a byte buffer using unsigned LEB128 encoding.
   ///
   /// ```motoko
   /// let buffer = Buffer.Buffer<Nat8>(8);
-  /// NatX.encodeNat(buffer, 123, #unsignedLEB128);
+  /// NatX.toNatBytesBuffer(buffer, 123, #unsignedLEB128);
   /// // buffer now contains the encoded bytes
   /// ```
-  public func encodeNat(buffer : Buffer.Buffer<Nat8>, value : Nat, encoding : { #unsignedLEB128; #lsb; #msb }) {
+  public func toNatBytesBuffer(buffer : Buffer.Buffer<Nat8>, value : Nat, encoding : { #unsignedLEB128; #lsb; #msb }) {
     switch (encoding) {
       case (#lsb) encodeNatClassic(buffer, value, #lsb);
       case (#msb) encodeNatClassic(buffer, value, #msb);
@@ -364,47 +377,105 @@ module {
     };
   };
 
+  /// Encodes a Nat8 to a byte array.
+  ///
+  /// ```motoko
+  /// let bytes = NatX.toNat8Bytes(123);
+  /// // bytes contains the encoded byte
+  /// ```
+  public func toNat8Bytes(value : Nat8) : [Nat8] {
+    let list = List.empty<Nat8>();
+    let buffer = Buffer.fromList(list);
+    toNat8BytesBuffer(buffer, value);
+    List.toArray(list);
+  };
+
+  /// Encodes a Nat8 to a byte buffer.
+  ///
+  /// ```motoko
+  /// let buffer = Buffer.Buffer<Nat8>(1);
+  /// NatX.toNat8BytesBuffer(buffer, 123);
+  /// // buffer now contains the encoded byte
+  /// ```
+  public func toNat8BytesBuffer(buffer : Buffer.Buffer<Nat8>, value : Nat8) {
+    buffer.write(value);
+  };
+
   /// Encodes a Nat8 to a byte buffer.
   ///
   /// ```motoko
   /// let buffer = Buffer.Buffer<Nat8>(1);
   /// NatX.encodeNat8(buffer, 123);
   /// // buffer now contains the encoded byte
+  /// Encodes a Nat16 to a byte array.
+  ///
+  /// ```motoko
+  /// let bytes = NatX.toNat16Bytes(12345, #lsb);
+  /// // bytes contains the encoded bytes
   /// ```
-  public func encodeNat8(buffer : Buffer.Buffer<Nat8>, value : Nat8) {
-    buffer.write(value);
+  public func toNat16Bytes(value : Nat16, encoding : { #lsb; #msb }) : [Nat8] {
+    let list = List.empty<Nat8>();
+    let buffer = Buffer.fromList(list);
+    toNat16BytesBuffer(buffer, value, encoding);
+    List.toArray(list);
   };
 
   /// Encodes a Nat16 to a byte buffer.
   ///
   /// ```motoko
   /// let buffer = Buffer.Buffer<Nat8>(2);
-  /// NatX.encodeNat16(buffer, 12345, #lsb);
+  /// NatX.toNat16BytesBuffer(buffer, 12345, #lsb);
   /// // buffer now contains the encoded bytes
   /// ```
-  public func encodeNat16(buffer : Buffer.Buffer<Nat8>, value : Nat16, encoding : { #lsb; #msb }) {
+  public func toNat16BytesBuffer(buffer : Buffer.Buffer<Nat8>, value : Nat16, encoding : { #lsb; #msb }) {
     encodeNatX(buffer, Nat64.fromNat(Nat16.toNat(value)), encoding, #b16);
+  };
+
+  /// Encodes a Nat32 to a byte array.
+  ///
+  /// ```motoko
+  /// let bytes = NatX.toNat32Bytes(1234567890, #lsb);
+  /// // bytes contains the encoded bytes
+  /// ```
+  public func toNat32Bytes(value : Nat32, encoding : { #lsb; #msb }) : [Nat8] {
+    let list = List.empty<Nat8>();
+    let buffer = Buffer.fromList(list);
+    toNat32BytesBuffer(buffer, value, encoding);
+    List.toArray(list);
   };
 
   /// Encodes a Nat32 to a byte buffer.
   ///
   /// ```motoko
   /// let buffer = Buffer.Buffer<Nat8>(4);
-  /// NatX.encodeNat32(buffer, 1234567890, #lsb);
+  /// NatX.toNat32BytesBuffer(buffer, 1234567890, #lsb);
   /// // buffer now contains the encoded bytes
   /// ```
-  public func encodeNat32(buffer : Buffer.Buffer<Nat8>, value : Nat32, encoding : { #lsb; #msb }) {
+  public func toNat32BytesBuffer(buffer : Buffer.Buffer<Nat8>, value : Nat32, encoding : { #lsb; #msb }) {
     encodeNatX(buffer, Nat64.fromNat(Nat32.toNat(value)), encoding, #b32);
+  };
+
+  /// Encodes a Nat64 to a byte array.
+  ///
+  /// ```motoko
+  /// let bytes = NatX.toNat64Bytes(1234567890123456789, #lsb);
+  /// // bytes contains the encoded bytes
+  /// ```
+  public func toNat64Bytes(value : Nat64, encoding : { #lsb; #msb }) : [Nat8] {
+    let list = List.empty<Nat8>();
+    let buffer = Buffer.fromList(list);
+    toNat64BytesBuffer(buffer, value, encoding);
+    List.toArray(list);
   };
 
   /// Encodes a Nat64 to a byte buffer.
   ///
   /// ```motoko
   /// let buffer = Buffer.Buffer<Nat8>(8);
-  /// NatX.encodeNat64(buffer, 1234567890123456789, #lsb);
+  /// NatX.toNat64BytesBuffer(buffer, 1234567890123456789, #lsb);
   /// // buffer now contains the encoded bytes
   /// ```
-  public func encodeNat64(buffer : Buffer.Buffer<Nat8>, value : Nat64, encoding : { #lsb; #msb }) {
+  public func toNat64BytesBuffer(buffer : Buffer.Buffer<Nat8>, value : Nat64, encoding : { #lsb; #msb }) {
     encodeNatX(buffer, value, encoding, #b64);
   };
 
@@ -412,16 +483,16 @@ module {
   ///
   /// ```motoko
   /// let bytes : [Nat8] = [0xE5, 0x8E, 0x26]; // 624485 in unsigned LEB128
-  /// let result = NatX.decodeNat(bytes.vals(), #unsignedLEB128);
+  /// let result = NatX.fromNatBytes(bytes.vals(), #unsignedLEB128);
   /// switch (result) {
   ///   case (null) { /* Decoding error */ };
   ///   case (?value) { /* value is 624485 */ };
   /// };
   /// ```
-  public func decodeNat(bytes : Iter.Iter<Nat8>, encoding : { #unsignedLEB128; #lsb; #msb }) : ?Nat {
+  public func fromNatBytes(bytes : Iter.Iter<Nat8>, encoding : { #unsignedLEB128; #lsb; #msb }) : ?Nat {
     switch (encoding) {
-      case (#lsb) decodeNatClassic(bytes, #lsb);
-      case (#msb) decodeNatClassic(bytes, #msb);
+      case (#lsb) fromNatClassicBytes(bytes, #lsb);
+      case (#msb) fromNatClassicBytes(bytes, #msb);
       case (#unsignedLEB128) do ? {
         var v : Nat = 0;
         var i : Nat = 0;
@@ -443,13 +514,13 @@ module {
   ///
   /// ```motoko
   /// let bytes : [Nat8] = [123];
-  /// let result = NatX.decodeNat8(bytes.vals(), #lsb);
+  /// let result = NatX.fromNat8Bytes(bytes.vals(), #lsb);
   /// switch (result) {
   ///   case (null) { /* Decoding error */ };
   ///   case (?value) { /* value is 123 */ };
   /// };
   /// ```
-  public func decodeNat8(bytes : Iter.Iter<Nat8>, _ : { #lsb; #msb }) : ?Nat8 {
+  public func fromNat8Bytes(bytes : Iter.Iter<Nat8>, _ : { #lsb; #msb }) : ?Nat8 {
     bytes.next();
   };
 
@@ -457,15 +528,15 @@ module {
   ///
   /// ```motoko
   /// let bytes : [Nat8] = [0x39, 0x30]; // 12345 in little-endian
-  /// let result = NatX.decodeNat16(bytes.vals(), #lsb);
+  /// let result = NatX.fromNat16Bytes(bytes.vals(), #lsb);
   /// switch (result) {
   ///   case (null) { /* Decoding error */ };
   ///   case (?value) { /* value is 12345 */ };
   /// };
   /// ```
-  public func decodeNat16(bytes : Iter.Iter<Nat8>, encoding : { #lsb; #msb }) : ?Nat16 {
+  public func fromNat16Bytes(bytes : Iter.Iter<Nat8>, encoding : { #lsb; #msb }) : ?Nat16 {
     do ? {
-      let value : Nat64 = decodeNatX(bytes, encoding, #b16)!;
+      let value : Nat64 = fromNatXBytes(bytes, encoding, #b16)!;
       from64To16(value);
     };
   };
@@ -474,15 +545,15 @@ module {
   ///
   /// ```motoko
   /// let bytes : [Nat8] = [0xD2, 0x02, 0x96, 0x49]; // 1234567890 in little-endian
-  /// let result = NatX.decodeNat32(bytes.vals(), #lsb);
+  /// let result = NatX.fromNat32Bytes(bytes.vals(), #lsb);
   /// switch (result) {
   ///   case (null) { /* Decoding error */ };
   ///   case (?value) { /* value is 1234567890 */ };
   /// };
   /// ```
-  public func decodeNat32(bytes : Iter.Iter<Nat8>, encoding : { #lsb; #msb }) : ?Nat32 {
+  public func fromNat32Bytes(bytes : Iter.Iter<Nat8>, encoding : { #lsb; #msb }) : ?Nat32 {
     do ? {
-      let value : Nat64 = decodeNatX(bytes, encoding, #b32)!;
+      let value : Nat64 = fromNatXBytes(bytes, encoding, #b32)!;
       from64To32(value);
     };
   };
@@ -491,17 +562,17 @@ module {
   ///
   /// ```motoko
   /// let bytes : [Nat8] = [0x15, 0x81, 0xE9, 0x7D, 0xF4, 0x10, 0x22, 0x11]; // 1234567890123456789 in little-endian
-  /// let result = NatX.decodeNat64(bytes.vals(), #lsb);
+  /// let result = NatX.fromNat64Bytes(bytes.vals(), #lsb);
   /// switch (result) {
   ///   case (null) { /* Decoding error */ };
   ///   case (?value) { /* value is 1234567890123456789 */ };
   /// };
   /// ```
-  public func decodeNat64(bytes : Iter.Iter<Nat8>, encoding : { #lsb; #msb }) : ?Nat64 {
-    decodeNatX(bytes, encoding, #b64);
+  public func fromNat64Bytes(bytes : Iter.Iter<Nat8>, encoding : { #lsb; #msb }) : ?Nat64 {
+    fromNatXBytes(bytes, encoding, #b64);
   };
 
-  private func decodeNatX(bytes : Iter.Iter<Nat8>, encoding : { #lsb; #msb }, size : { #b16; #b32; #b64 }) : ?Nat64 {
+  private func fromNatXBytes(bytes : Iter.Iter<Nat8>, encoding : { #lsb; #msb }, size : { #b16; #b32; #b64 }) : ?Nat64 {
     do ? {
       let byteLength : Nat64 = getByteLength(size);
       var nat64 : Nat64 = 0;
@@ -548,7 +619,7 @@ module {
     Util.writeBytes(buffer, bytes, encoding);
   };
 
-  private func decodeNatClassic(bytesIter : Iter.Iter<Nat8>, encoding : { #lsb; #msb }) : ?Nat {
+  private func fromNatClassicBytes(bytesIter : Iter.Iter<Nat8>, encoding : { #lsb; #msb }) : ?Nat {
     // Use helper to read bytes
     let bytesOpt = Util.readAllBytes(bytesIter);
 

@@ -1,17 +1,18 @@
-import Buffer "mo:base/Buffer";
-import Int "mo:base/Int";
-import Int16 "mo:base/Int16";
-import Int32 "mo:base/Int32";
-import Int64 "mo:base/Int64";
-import Int8 "mo:base/Int8";
-import Iter "mo:base/Iter";
-import Nat64 "mo:base/Nat64";
-import Nat8 "mo:base/Nat8";
-import Nat "mo:base/Nat";
-import Array "mo:base/Array";
+import Buffer "mo:buffer";
+import Int "mo:core/Int";
+import Int16 "mo:core/Int16";
+import Int32 "mo:core/Int32";
+import Int64 "mo:core/Int64";
+import Int8 "mo:core/Int8";
+import Iter "mo:core/Iter";
+import Nat64 "mo:core/Nat64";
+import Nat8 "mo:core/Nat8";
+import Nat "mo:core/Nat";
+import Array "mo:core/Array";
 import NatX "./NatX";
 import Util "./Util";
-import Text "mo:base/Text";
+import Text "mo:core/Text";
+import List "mo:core/List";
 
 module {
   public type Format = NatX.Format;
@@ -266,7 +267,7 @@ module {
       case (#lsb) encodeIntClassic(buffer, value, #lsb);
       case (#signedLEB128) {
         if (value == 0) {
-          buffer.add(0);
+          buffer.write(0);
           return;
         };
         // Signed LEB128 - https://en.wikipedia.org/wiki/LEB128#Signed_LEB128
@@ -295,7 +296,7 @@ module {
   /// // buffer now contains the encoded byte
   /// ```
   public func encodeInt8(buffer : Buffer.Buffer<Nat8>, value : Int8) {
-    buffer.add(Int8.toNat8(value));
+    buffer.write(Int8.toNat8(value));
   };
 
   /// Encodes an Int16 to a byte buffer.
@@ -448,7 +449,7 @@ module {
     do ? {
       let byteLength : Nat64 = getByteLength(size);
       var nat64 : Nat64 = 0;
-      for (i in Iter.range(0, Nat64.toNat(byteLength) - 1)) {
+      for (i in Nat.range(0, Nat64.toNat(byteLength))) {
         let b : Nat8 = bytes.next()!;
         let byteOffset : Nat64 = switch (encoding) {
           case (#lsb) Nat64.fromNat(i);
@@ -490,20 +491,20 @@ module {
 
   private func encodeIntX(buffer : Buffer.Buffer<Nat8>, value : Int64, encoding : { #lsb; #msb }, size : { #b16; #b32; #b64 }) {
     let byteLength : Nat64 = getByteLength(size);
-    for (i in Iter.range(0, Nat64.toNat(byteLength) - 1)) {
+    for (i in Nat.range(0, Nat64.toNat(byteLength))) {
       let byteOffset : Int64 = switch (encoding) {
         case (#lsb) Int64.fromInt(i);
         case (#msb) Int64.fromInt(Nat64.toNat(byteLength - 1) - i);
       };
       let byte : Int64 = (value >> (byteOffset * 8)) & 0xff;
-      buffer.add(Nat8.fromNat(Int.abs(Int64.toInt(byte))));
+      buffer.write(Nat8.fromNat(Int.abs(Int64.toInt(byte))));
     };
   };
 
   /// Encodes an arbitrary precision Int using MSB or LSB classic two's complement.
   private func encodeIntClassic(buffer : Buffer.Buffer<Nat8>, value : Int, encoding : { #lsb; #msb }) {
     if (value == 0) {
-      buffer.add(0); // Handle 0 separately
+      buffer.write(0); // Handle 0 separately
       return;
     };
 
@@ -526,18 +527,16 @@ module {
 
       if (isNegative and not msb) {
         // Negative number requires MSB=1. Pad with 0xFF byte (8 true bits at MSB end)
-        let currentSize = bits.size();
-        let newBits = Buffer.Buffer<Bool>(currentSize + 8);
-        for (b in bits.vals()) { newBits.add(b) };
-        for (_ in Iter.range(1, 8)) { newBits.add(true) }; // Add 8 'true' bits
-        bits := Buffer.toArray(newBits);
+        let newBits = List.empty<Bool>();
+        for (b in bits.vals()) { List.add(newBits, b) };
+        for (_ in Nat.range(1, 9)) { List.add(newBits, true) }; // Add 8 'true' bits
+        bits := List.toArray(newBits);
       } else if (not isNegative and msb) {
         // Positive number requires MSB=0. Pad with 0x00 byte (8 false bits at MSB end)
-        let currentSize = bits.size();
-        let newBits = Buffer.Buffer<Bool>(currentSize + 8);
-        for (b in bits.vals()) { newBits.add(b) };
-        for (_ in Iter.range(1, 8)) { newBits.add(false) }; // Add 8 'false' bits
-        bits := Buffer.toArray(newBits);
+        let newBits = List.empty<Bool>();
+        for (b in bits.vals()) { List.add(newBits, b) };
+        for (_ in Nat.range(1, 9)) { List.add(newBits, false) }; // Add 8 'false' bits
+        bits := List.toArray(newBits);
       };
     };
 

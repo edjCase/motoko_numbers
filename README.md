@@ -310,7 +310,6 @@ Decodes the iteration of bytes into a value. If invalid bytes, null will be retu
 
 Decodes the iteration of bytes into a value. If invalid bytes, null will be returned
 
-
 # Testing
 
 ```

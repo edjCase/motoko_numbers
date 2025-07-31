@@ -1,10 +1,10 @@
-import Buffer "mo:base/Buffer";
-import Float "mo:base/Float";
-import Int "mo:base/Int";
-import Int64 "mo:base/Int64";
-import Iter "mo:base/Iter";
-import Nat "mo:base/Nat";
-import Nat64 "mo:base/Nat64";
+import Buffer "mo:buffer";
+import Float "mo:core/Float";
+import Int "mo:core/Int";
+import Int64 "mo:core/Int64";
+import Iter "mo:core/Iter";
+import Nat "mo:core/Nat";
+import Nat64 "mo:core/Nat64";
 import NatX "./NatX";
 
 module {

@@ -1,318 +1,173 @@
-## Funding
+# Motoko Extended Numbers
 
-This library was originally incentivized by [ICDevs](https://ICDevs.org). You
-can view more about the bounty on the
-[forum](https://forum.dfinity.org/t/icdevs-org-bounty-18-cbor-and-candid-motoko-parser-3-000/11398)
-or [website](https://icdevs.org/bounties/2022/02/22/CBOR-and-Candid-Motoko-Parser.html). The
-bounty was funded by The ICDevs.org commuity and the award paid to
-@Gekctek. If you use this library and gain value from it, please consider
-a [donation](https://icdevs.org/donations.html) to ICDevs.
+[![MOPS](https://img.shields.io/badge/MOPS-xtended--numbers-blue)](https://mops.one/xtended-numbers)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/edjCase/motoko_numbers/blob/main/LICENSE)
 
-# Overview
+A comprehensive Motoko library that extends the base number functionality with advanced features including 16/32-bit precision floats, number encoding/decoding, text parsing, and type conversions. This library provides robust utilities for working with various number formats and encodings in Motoko applications.
 
-This is a library that extends on the Motoko base library for numbers. Maily focuses on encoding of numbers and 16/32 bit precision floats
-
-# Package
+## Package
 
 ### MOPS
 
+```bash
+mops add xtended-numbers
 ```
-mops install xtended-numbers
+
+To set up MOPS package manager, follow the instructions from the [MOPS Site](https://mops.one)
+
+## Quick Start
+
+### Example 1: Number Text Parsing
+
+```motoko
+import IntX "mo:xtended-numbers/IntX";
+import NatX "mo:xtended-numbers/NatX";
+
+// Parse integers with different formats
+let hexValue = IntX.fromTextAdvanced("0xFF", #hex, null);
+let binaryValue = IntX.fromTextAdvanced("1010", #binary, null);
+let decimalWithSeparator = IntX.fromTextAdvanced("1,000,000", #decimal, ?',');
+
+// Parse natural numbers
+let natValue = NatX.fromTextAdvanced("1_000_000", #decimal, ?'_');
+
+switch (hexValue) {
+  case (?value) Debug.print("Hex 0xFF = " # Int.toText(value));
+  case null Debug.print("Failed to parse hex value");
+};
 ```
 
-To setup MOPS package manage, follow the instructions from the [MOPS Site](https://j4mwm-bqaaa-aaaam-qajbq-cai.ic0.app/)
-
-# API
-
-## FloatX
-
-`nearlyEqual(a: Float, b: Float, relativeTolerance: Float, absoluteTolerance: Float): Bool`
-
-Takes in 2 floats and compares them loosely according to the tolerances. Absolute tolerance is a max flat difference between the values. Relative tolerance is the max difference between the values based on the percentage of the max value. For example, given the values `nealyEqual(1, 5, .0001, .001)` the relative diff is `max(1, 5) * .0001` or `.0005` while the absolute diff is `.001`
-
-`fromFloat(float: Float, precision: FloatPrecision) : FloatX`
-
-Converts a `Float` to a `FloatX` with the specified precision
-
-`toFloat(fX: FloatX) : Float`
-
-Converts a `FloatX` to a `Float`
-
-`encode(buffer: Buffer.Buffer<Nat8>, value: FloatX, encoding: {#lsb; #msb})`
-
-Encodes a `FloatX` to bytes buffer
-
-`decode(bytes: Iter.Iter<Nat8>, precision: {#f16; #f32; #f64}, encoding: {#lsb; #msb}) : ?FloatX`
-
-Decodes a `FloatX` from an iteration of bytes. If null is returned, then there was an error decoding or an unexpected end of bytes
-
-`isNaN(fX: FloatX) : Bool`
-
-Returns `true` if the `FloatX` value represents NaN (Not a Number), `false` otherwise
-
-`isPosInf(fX: FloatX) : Bool`
-
-Returns `true` if the `FloatX` value represents positive infinity, `false` otherwise
-
-`isNegInf(fX: FloatX) : Bool`
-
-Returns `true` if the `FloatX` value represents negative infinity, `false` otherwise
-
-## IntX
-
-`toText(value : Int) : Text`
-
-Converts an Int into a text representation. Outputs a decimal value (-?[0-9]+).
-
-`toTextAdvanced(value : Int, format : Format) : Text`
-
-Converts an Int into a text representation. Allows for the specification of the output format.
-
-`fromText(value : Text) : ?Int`
-
-Converts text representation of a decimal integer (-?[0-9]+). If the text cannot
-be parsed as an integer, the value returned will be null. Same as calling the `fromTextAdvanced`
-with the `#decimal` format and no seperator
-
-`fromTextAdvanced(value : Text, format : Format, seperator : ?Char) : ?Int`
-
-Converts text representation of an integer in a specified format. Optioanlly can specify the
-seperator that should be ignored (',' for 1,000,000 or '\_' for 1_000_000). If the text cannot
-be parsed as an integer, the value returned will be null
-
-`from64To8(value: Int64) : Int8`
-
-Conversion. Traps on overflow/underflow.
-
-`from64To16(value: Int64) : Int16`
-
-Conversion. Traps on overflow/underflow.
-
-`from64To32(value: Int64) : Int32`
-
-Conversion. Traps on overflow/underflow.
-
-`from64ToInt(value: Int64) : Int`
-
-Conversion. Traps on overflow/underflow.
-
-`from32To8(value: Int32) : Int8`
-
-Conversion. Traps on overflow/underflow.
-
-`from32To16(value: Int32) : Int16`
-
-Conversion. Traps on overflow/underflow.
-
-`from32To64(value: Int32) : Int64`
-
-Conversion. Traps on overflow/underflow.
-
-`from32ToInt(value: Int32) : Int`
-
-Conversion. Traps on overflow/underflow.
-
-`from16To8(value: Int16) : Int8`
-
-Conversion. Traps on overflow/underflow.
-
-`from16To32(value: Int16) : Int32`
-
-Conversion. Traps on overflow/underflow.
-
-`from16To64(value: Int16) : Int64`
-
-Conversion. Traps on overflow/underflow.
-
-`from16ToInt(value: Int16) : Int`
-
-Conversion. Traps on overflow/underflow.
-
-`from8To16(value: Int8) : Int16`
-
-Conversion. Traps on overflow/underflow.
-
-`from8To32(value: Int8) : Int32`
-
-Conversion. Traps on overflow/underflow.
-
-`from8To64(value: Int8) : Int64`
-
-Conversion. Traps on overflow/underflow.
-
-`from8ToInt(value: Int8) : Int`
-
-Conversion. Traps on overflow/underflow.
-
-`encodeInt(buffer: Buffer.Buffer<Nat8>, value: Int, encoding: {#signedLEB128})`
-
-Encodes the specified value into the byte buffer
-
-`encodeInt8(buffer: Buffer.Buffer<Nat8>, value: Int8)`
-
-Encodes the specified value into the byte buffer
-
-`encodeInt16(buffer: Buffer.Buffer<Nat8>, value: Int16, encoding: {#lsb; #msb})`
-
-Encodes the specified value into the byte buffer
-
-`encodeInt32(buffer: Buffer.Buffer<Nat8>, value: Int32, encoding: {#lsb; #msb})`
-
-Encodes the specified value into the byte buffer
-
-`encodeInt64(buffer: Buffer.Buffer<Nat8>, value: Int64, encoding: {#lsb; #msb})`
-
-Encodes the specified value into the byte buffer
-
-`decodeInt(bytes: Iter.Iter<Nat8>, encoding: {#signedLEB128}) : ?Int`
-
-Decodes the iteration of bytes into a value. If invalid bytes, null will be returned
-
-`decodeInt8(bytes: Iter.Iter<Nat8>, encoding: {#lsb; #msb}) : ?Int8`
-
-Decodes the iteration of bytes into a value. If invalid bytes, null will be returned
-
-`decodeInt16(bytes: Iter.Iter<Nat8>, encoding: {#lsb; #msb}) : ?Int16`
-
-Decodes the iteration of bytes into a value. If invalid bytes, null will be returned
-
-`decodeInt32(bytes: Iter.Iter<Nat8>, encoding: {#lsb; #msb}) : ?Int32`
-
-Decodes the iteration of bytes into a value. If invalid bytes, null will be returned
-
-`decodeInt64(bytes: Iter.Iter<Nat8>, encoding: {#lsb; #msb}) : ?Int64`
-
-Decodes the iteration of bytes into a value. If invalid bytes, null will be returned
-
-## NatX
-
-`toText(value : Nat) : Text`
-
-Converts an Nat into a text representation. Outputs a decimal value (-?[0-9]+).
-
-`toTextAdvanced(value : Nat, format : Format) : Text`
-
-Converts an Nat into a text representation. Allows for the specification of the output format.
-
-`fromText(value : Text) : ?Nat`
-
-Converts text representation of a decimal positive integer (-?[0-9]+). If the text cannot
-be parsed as an positive integer, the value returned will be null. Same as calling the `fromTextAdvanced`
-with the `#decimal` format and no seperator
-
-`fromTextAdvanced(value : Text, format : Format, seperator : ?Char) : ?Nat`
-
-Converts text representation of an positive integer in a specified format. Optioanlly can specify the
-seperator that should be ignored (',' for 1,000,000 or '\_' for 1_000_000). If the text cannot
-be parsed as an positive integer, the value returned will be null
-
-`from64To8(value: Nat64) : Nat8`
-
-Conversion. Traps on overflow/underflow.
-
-`from64To16(value: Nat64) : Nat16`
-
-Conversion. Traps on overflow/underflow.
-
-`from64To32(value: Nat64) : Nat32`
-
-Conversion. Traps on overflow/underflow.
-
-`from64ToNat(value: Nat64) : Nat`
-
-Conversion. Traps on overflow/underflow.
-
-`from32To8(value: Nat32) : Nat8`
-
-Conversion. Traps on overflow/underflow.
-
-`from32To16(value: Nat32) : Nat16`
-
-Conversion. Traps on overflow/underflow.
-
-`from32To64(value: Nat32) : Nat64`
-
-Conversion. Traps on overflow/underflow.
-
-`from32ToNat(value: Nat32) : Nat`
-
-Conversion. Traps on overflow/underflow.
-
-`from16To8(value: Nat16) : Nat8`
-
-Conversion. Traps on overflow/underflow.
-
-`from16To32(value: Nat16) : Nat32`
-
-Conversion. Traps on overflow/underflow.
-
-`from16To64(value: Nat16) : Nat64`
-
-Conversion. Traps on overflow/underflow.
-
-`from16ToNat(value: Nat16) : Nat`
-
-Conversion. Traps on overflow/underflow.
-
-`from8To16(value: Nat8) : Nat16`
-
-Conversion. Traps on overflow/underflow.
-
-`from8To32(value: Nat8) : Nat32`
-
-Conversion. Traps on overflow/underflow.
-
-`from8To64(value: Nat8) : Nat64`
-
-Conversion. Traps on overflow/underflow.
-
-`from8ToNat(value: Nat8) : Nat`
-
-Conversion. Traps on overflow/underflow.
-
-`encodeNat(buffer: Buffer.Buffer<Nat8>, value: Nat, encoding: {#signedLEB128})`
-
-Encodes the specified value into the byte buffer
-
-`encodeNat8(buffer: Buffer.Buffer<Nat8>, value: Nat8)`
-
-Encodes the specified value into the byte buffer
-
-`encodeNat16(buffer: Buffer.Buffer<Nat8>, value: Nat16, encoding: {#lsb; #msb})`
-
-Encodes the specified value into the byte buffer
-
-`encodeNat32(buffer: Buffer.Buffer<Nat8>, value: Nat32, encoding: {#lsb; #msb})`
-
-Encodes the specified value into the byte buffer
-
-`encodeNat64(buffer: Buffer.Buffer<Nat8>, value: Nat64, encoding: {#lsb; #msb})`
-
-Encodes the specified value into the byte buffer
-
-`decodeNat(bytes: Iter.Iter<Nat8>, encoding: {#signedLEB128}) : ?Nat`
-
-Decodes the iteration of bytes into a value. If invalid bytes, null will be returned
-
-`decodeNat8(bytes: Iter.Iter<Nat8>, encoding: {#lsb; #msb}) : ?Nat8`
-
-Decodes the iteration of bytes into a value. If invalid bytes, null will be returned
-
-`decodeNat16(bytes: Iter.Iter<Nat8>, encoding: {#lsb; #msb}) : ?Nat16`
-
-Decodes the iteration of bytes into a value. If invalid bytes, null will be returned
-
-`decodeNat32(bytes: Iter.Iter<Nat8>, encoding: {#lsb; #msb}) : ?Nat32`
-
-Decodes the iteration of bytes into a value. If invalid bytes, null will be returned
-
-`decodeNat64(bytes: Iter.Iter<Nat8>, encoding: {#lsb; #msb}) : ?Nat64`
-
-Decodes the iteration of bytes into a value. If invalid bytes, null will be returned
-
-
-# Testing
-
+### Example 2: Binary Encoding
+
+```motoko
+import FloatX "mo:xtended-numbers/FloatX";
+import IntX "mo:xtended-numbers/IntX";
+import Buffer "mo:buffer";
+
+// Encode float to binary buffer
+let list = List.empty<Nat8>();
+let buffer = Buffer.fromList(list);
+let float32Value = FloatX.fromFloat(3.14159, #f32);
+FloatX.encode(buffer, float32Value, #lsb); // Little-endian encoding
+
+// Encode integer to buffer
+let int32Value : Int32 = 42;
+IntX.encodeInt32(buffer, int32Value, #msb); // Big-endian encoding
+
+Debug.print("Encoded bytes: " # debug_show(List.toArray(list)));
 ```
+
+### Example 3: Type Conversions
+
+```motoko
+import IntX "mo:xtended-numbers/IntX";
+import NatX "mo:xtended-numbers/NatX";
+
+// Safe type conversions with overflow protection
+let largeInt64 : Int64 = 1000000;
+
+// Convert between different integer sizes
+let int32Value = IntX.from64To32(largeInt64); // Traps on overflow
+let int16Value = IntX.from32To16(int32Value);
+let int8Value = IntX.from16To8(int16Value);
+
+// Convert between signed and unsigned
+let natValue = NatX.from64ToNat(Int.abs(largeInt64));
+let nat32Value = NatX.from64To32(natValue);
+
+Debug.print("Converted chain: " # Int8.toText(int8Value));
+```
+
+### Example 4: Float Precision Conversion
+
+```motoko
+import FloatX "mo:xtended-numbers/FloatX";
+import Debug "mo:core/Debug";
+
+// Convert standard Float to 16-bit precision
+let standardFloat : Float = 3.14159;
+let float16 = FloatX.fromFloat(standardFloat, #f16);
+
+// Convert back to standard Float
+let backToFloat = FloatX.toFloat(float16);
+Debug.print("Original: " # Float.toText(standardFloat));
+Debug.print("16-bit precision: " # Float.toText(backToFloat));
+
+// Check for special values
+if (FloatX.isNaN(float16)) {
+  Debug.print("Value is NaN");
+} else if (FloatX.isPosInf(float16)) {
+  Debug.print("Value is positive infinity");
+};
+```
+
+## API Reference
+
+### FloatX Module
+
+```motoko
+// Float precision types
+public type FloatPrecision = {#f16; #f32; #f64};
+public type FloatX = {precision: FloatPrecision; /* internal representation */};
+
+// Core conversion functions
+public func fromFloat(float: Float, precision: FloatPrecision) : FloatX;
+public func toFloat(fX: FloatX) : Float;
+
+// Comparison and validation
+public func nearlyEqual(a: Float, b: Float, relativeTolerance: Float, absoluteTolerance: Float): Bool;
+public func isNaN(fX: FloatX) : Bool;
+public func isPosInf(fX: FloatX) : Bool;
+public func isNegInf(fX: FloatX) : Bool;
+
+// Binary encoding
+public func encode(buffer: Buffer.Buffer<Nat8>, value: FloatX, encoding: {#lsb; #msb});
+public func decode(bytes: Iter.Iter<Nat8>, precision: {#f16; #f32; #f64}, encoding: {#lsb; #msb}) : ?FloatX;
+```
+
+### IntX Module
+
+```motoko
+// Text formatting type
+public type Format = {#decimal; #hex; #binary; #octal};
+
+// Text conversion
+public func toText(value : Int) : Text;
+public func toTextAdvanced(value : Int, format : Format) : Text;
+public func fromText(value : Text) : ?Int;
+public func fromTextAdvanced(value : Text, format : Format, seperator : ?Char) : ?Int;
+
+// Type conversions (examples - full set available)
+public func from64To32(value: Int64) : Int32;
+public func from32To16(value: Int32) : Int16;
+public func from16To8(value: Int16) : Int8;
+
+// Binary encoding
+public func encodeInt32(buffer: Buffer.Buffer<Nat8>, value: Int32, encoding: {#lsb; #msb});
+public func decodeInt32(bytes: Iter.Iter<Nat8>, encoding: {#lsb; #msb}) : ?Int32;
+```
+
+### NatX Module
+
+```motoko
+// Similar API to IntX but for natural numbers
+public func toText(value : Nat) : Text;
+public func fromText(value : Text) : ?Nat;
+public func from64To32(value: Nat64) : Nat32;
+public func encodeNat32(buffer: Buffer.Buffer<Nat8>, value: Nat32, encoding: {#lsb; #msb});
+// ... (full API similar to IntX)
+```
+
+## Testing
+
+```bash
 mops test
 ```
+
+## Funding
+
+This library was originally incentivized by [ICDevs](https://ICDevs.org). You can view more about the bounty on the [forum](https://forum.dfinity.org/t/icdevs-org-bounty-18-cbor-and-candid-motoko-parser-3-000/11398) or [website](https://icdevs.org/bounties/2022/02/22/CBOR-and-Candid-Motoko-Parser.html). The bounty was funded by The ICDevs.org community and the award paid to @Gekctek. If you use this library and gain value from it, please consider a [donation](https://icdevs.org/donations.html) to ICDevs.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

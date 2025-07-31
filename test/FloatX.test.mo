@@ -1,29 +1,29 @@
-import Debug "mo:base/Debug";
-import Float "mo:base/Float";
+import Float "mo:core/Float";
 import FloatX "../src/FloatX";
-import Nat8 "mo:base/Nat8";
+import Nat8 "mo:core/Nat8";
 import Util "../src/Util";
 import { test } "mo:test";
+import Runtime "mo:core/Runtime";
 
 func testFloat(bytes : [Nat8], expected : Float) {
   let precision = switch (bytes.size()) {
     case (2) #f16;
     case (4) #f32;
     case (8) #f64;
-    case (_) Debug.trap("Invalid byte size: " # debug_show (bytes.size()));
+    case (_) Runtime.trap("Invalid byte size: " # debug_show (bytes.size()));
   };
   let actualFX = FloatX.decode(bytes.vals(), precision, #msb);
   let expectedFX = FloatX.fromFloat(expected, precision);
   switch (actualFX) {
-    case (null) Debug.trap("Invalid bytes for float: " # debug_show (bytes));
+    case (null) Runtime.trap("Invalid bytes for float: " # debug_show (bytes));
     case (?v) {
       if (v != expectedFX) {
-        Debug.trap("Invalid value.\nExpected: " # debug_show (expectedFX) # "\nActual:   " # debug_show (v) # "\nExpected Value: " # Float.format(#exact, expected) # "\nBytes: " # Util.toHexString(bytes));
+        Runtime.trap("Invalid value.\nExpected: " # debug_show (expectedFX) # "\nActual:   " # debug_show (v) # "\nExpected Value: " # Float.format(#exact, expected) # "\nBytes: " # Util.toHexString(bytes));
       };
       let actualFloat : Float = FloatX.toFloat(v);
       // TODO shouldnt they be exact?
       if (Float.abs(actualFloat - expected) > 0.00000001) {
-        Debug.trap("Invalid value.\nExpected: " # Float.format(#exact, expected) # "\nActual:   " # Float.format(#exact, actualFloat) # "\nBytes: " # Util.toHexString(bytes));
+        Runtime.trap("Invalid value.\nExpected: " # Float.format(#exact, expected) # "\nActual:   " # Float.format(#exact, actualFloat) # "\nBytes: " # Util.toHexString(bytes));
       };
     };
   };

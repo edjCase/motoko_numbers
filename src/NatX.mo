@@ -1,13 +1,14 @@
-import Buffer "mo:base/Buffer";
-import Text "mo:base/Text";
-import Iter "mo:base/Iter";
-import Nat "mo:base/Nat";
-import Nat16 "mo:base/Nat16";
-import Nat32 "mo:base/Nat32";
-import Nat64 "mo:base/Nat64";
-import Nat8 "mo:base/Nat8";
+import Buffer "mo:buffer";
+import Text "mo:core/Text";
+import Iter "mo:core/Iter";
+import Nat "mo:core/Nat";
+import Nat16 "mo:core/Nat16";
+import Nat32 "mo:core/Nat32";
+import Nat64 "mo:core/Nat64";
+import Nat8 "mo:core/Nat8";
+import List "mo:core/List";
+import Runtime "mo:core/Runtime";
 import Util "./Util";
-import Prelude "mo:base/Prelude";
 
 module {
 
@@ -128,7 +129,7 @@ module {
       case (#hexadecimal) 16;
     };
 
-    var buffer = Buffer.Buffer<Char>(5);
+    let buffer = List.empty<Char>();
     var remainingValue = value;
     while (remainingValue > 0) {
       let charScalarValue = remainingValue % baseScalar; // Get last digit
@@ -150,13 +151,13 @@ module {
         case (13) 'D';
         case (14) 'E';
         case (15) 'F';
-        case (_) Prelude.unreachable();
+        case (_) Runtime.unreachable();
       };
-      buffer.add(c);
+      List.add(buffer, c);
       remainingValue := remainingValue / baseScalar; // Remove last digit
     };
-    Buffer.reverse(buffer); // Reverse because digits are from least to most significant
-    Text.fromIter(buffer.vals());
+    List.reverseInPlace(buffer); // Reverse because digits are from least to most significant
+    Text.fromIter(List.values(buffer));
   };
 
   /// Converts Nat64 to Nat8. Traps on overflow.
@@ -348,7 +349,7 @@ module {
       case (#msb) encodeNatClassic(buffer, value, #msb);
       case (#unsignedLEB128) {
         if (value == 0) {
-          buffer.add(0);
+          buffer.write(0);
           return;
         };
         // Unsigned LEB128 - https://en.wikipedia.org/wiki/LEB128#Unsigned_LEB128
@@ -371,7 +372,7 @@ module {
   /// // buffer now contains the encoded byte
   /// ```
   public func encodeNat8(buffer : Buffer.Buffer<Nat8>, value : Nat8) {
-    buffer.add(value);
+    buffer.write(value);
   };
 
   /// Encodes a Nat16 to a byte buffer.
@@ -504,7 +505,7 @@ module {
     do ? {
       let byteLength : Nat64 = getByteLength(size);
       var nat64 : Nat64 = 0;
-      for (i in Iter.range(0, Nat64.toNat(byteLength) - 1)) {
+      for (i in Nat.range(0, Nat64.toNat(byteLength))) {
         let b = from8To64(bytes.next()!);
         let byteOffset : Nat64 = switch (encoding) {
           case (#lsb) Nat64.fromNat(i);
@@ -518,13 +519,13 @@ module {
 
   private func encodeNatX(buffer : Buffer.Buffer<Nat8>, value : Nat64, encoding : { #lsb; #msb }, size : { #b16; #b32; #b64 }) {
     let byteLength : Nat64 = getByteLength(size);
-    for (i in Iter.range(0, Nat64.toNat(byteLength) - 1)) {
+    for (i in Nat.range(0, Nat64.toNat(byteLength))) {
       let byteOffset : Nat64 = switch (encoding) {
         case (#lsb) Nat64.fromNat(i);
         case (#msb) Nat64.fromNat(Nat64.toNat(byteLength - 1) - i);
       };
       let byte : Nat8 = from64To8((value >> (byteOffset * 8)) & 0xff);
-      buffer.add(byte);
+      buffer.write(byte);
     };
   };
 
@@ -538,7 +539,7 @@ module {
 
   private func encodeNatClassic(buffer : Buffer.Buffer<Nat8>, value : Nat, encoding : { #lsb; #msb }) {
     if (value == 0) {
-      buffer.add(0); // Handle 0 separately
+      buffer.write(0); // Handle 0 separately
       return;
     };
     // Nat specific: No sign logic needed

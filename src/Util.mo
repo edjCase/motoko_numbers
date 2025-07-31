@@ -8,6 +8,7 @@ import Text "mo:core/Text";
 import Nat "mo:core/Nat";
 import List "mo:core/List";
 import Runtime "mo:core/Runtime";
+
 module {
   /// Converts a natural number to its binary representation as an array of booleans.
   ///
@@ -309,7 +310,7 @@ module {
 
     // Always build the 'bits' array in LSB order
     for (i in byteRange) {
-      let byte = bytes[Int.abs(i)]; // Use Nat.abs for revRange index
+      let byte = bytes[i]; // Use Nat.abs for revRange index
       for (j in Nat.range(0, 8)) {
         // LSB (bit 0) to MSB (bit 7) within byte
         List.add(bits, Nat8.bittest(byte, j));
@@ -335,11 +336,11 @@ module {
     value;
   };
 
-  private func revRange(startInclusive : Nat, endInclusive : Nat) : Iter.Iter<Nat> {
-    if (startInclusive < endInclusive) {
+  private func revRange(startExclusive : Nat, endInclusive : Nat) : Iter.Iter<Nat> {
+    if (startExclusive < endInclusive) {
       Runtime.trap("revRange: start must be greater than or equal to end");
     };
-    var i : Int = startInclusive;
+    var i : Int = startExclusive - 1;
     {
       next = func() : ?Nat {
         if (i < endInclusive) {

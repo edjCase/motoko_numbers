@@ -1,13 +1,13 @@
-import Buffer "mo:buffer";
-import Text "mo:core/Text";
-import Iter "mo:core/Iter";
-import Nat "mo:core/Nat";
-import Nat16 "mo:core/Nat16";
-import Nat32 "mo:core/Nat32";
-import Nat64 "mo:core/Nat64";
-import Nat8 "mo:core/Nat8";
-import List "mo:core/List";
-import Runtime "mo:core/Runtime";
+import Buffer "mo:buffer@0";
+import Text "mo:core@1/Text";
+import Iter "mo:core@1/Iter";
+import Nat "mo:core@1/Nat";
+import Nat16 "mo:core@1/Nat16";
+import Nat32 "mo:core@1/Nat32";
+import Nat64 "mo:core@1/Nat64";
+import Nat8 "mo:core@1/Nat8";
+import List "mo:core@1/List";
+import Runtime "mo:core@1/Runtime";
 import Util "./Util";
 
 module {

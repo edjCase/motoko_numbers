@@ -1,16 +1,16 @@
-import List "mo:core/List";
-import Buffer "mo:buffer";
-import Iter "mo:core/Iter";
-import Int8 "mo:core/Int8";
-import Int16 "mo:core/Int16";
-import Int32 "mo:core/Int32";
-import Int64 "mo:core/Int64";
-import Int "mo:core/Int";
+import List "mo:core@1/List";
+import Buffer "mo:buffer@0";
+import Iter "mo:core@1/Iter";
+import Int8 "mo:core@1/Int8";
+import Int16 "mo:core@1/Int16";
+import Int32 "mo:core@1/Int32";
+import Int64 "mo:core@1/Int64";
+import Int "mo:core@1/Int";
 import IntX "../src/IntX";
 import TestUtil "./TestUtil";
 import Util "../src/Util";
 import { test } "mo:test";
-import Runtime "mo:core/Runtime";
+import Runtime "mo:core@1/Runtime";
 
 func testToText(value : Int, expected : { binary : Text; decimal : Text; hexadecimal : Text }) {
   testToTextInternal(value, expected.binary, #binary);

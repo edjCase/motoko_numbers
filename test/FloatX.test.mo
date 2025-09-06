@@ -1,9 +1,9 @@
-import Float "mo:core/Float";
+import Float "mo:core@1/Float";
 import FloatX "../src/FloatX";
-import Nat8 "mo:core/Nat8";
+import Nat8 "mo:core@1/Nat8";
 import Util "../src/Util";
 import { test } "mo:test";
-import Runtime "mo:core/Runtime";
+import Runtime "mo:core@1/Runtime";
 
 func testFloat(bytes : [Nat8], expected : Float) {
   let precision = switch (bytes.size()) {

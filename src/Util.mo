@@ -1,13 +1,13 @@
-import Array "mo:core/Array";
-import Buffer "mo:buffer";
-import Char "mo:core/Char";
-import Int "mo:core/Int";
-import Iter "mo:core/Iter";
-import Nat8 "mo:core/Nat8";
-import Text "mo:core/Text";
-import Nat "mo:core/Nat";
-import List "mo:core/List";
-import Runtime "mo:core/Runtime";
+import Array "mo:core@1/Array";
+import Buffer "mo:buffer@0";
+import Char "mo:core@1/Char";
+import Int "mo:core@1/Int";
+import Iter "mo:core@1/Iter";
+import Nat8 "mo:core@1/Nat8";
+import Text "mo:core@1/Text";
+import Nat "mo:core@1/Nat";
+import List "mo:core@1/List";
+import Runtime "mo:core@1/Runtime";
 
 module {
   /// Converts a natural number to its binary representation as an array of booleans.
@@ -28,7 +28,7 @@ module {
       List.add(buffer, false); // Pad 0's for full byte
     };
     if (hasSign) {
-      let mostSignificantBit : Bool = List.get(buffer, List.size(buffer) - 1 : Nat);
+      let mostSignificantBit : Bool = List.at(buffer, List.size(buffer) - 1 : Nat);
       if (mostSignificantBit) {
         // If most significant bit is a 1, overflow to another byte
         for (i in Nat.range(1, byteLength + 1)) {

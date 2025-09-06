@@ -1,5 +1,5 @@
-import Nat8 "mo:core/Nat8";
-import Nat "mo:core/Nat";
+import Nat8 "mo:core@1/Nat8";
+import Nat "mo:core@1/Nat";
 
 module {
   public func bytesAreEqual(b1 : [Nat8], b2 : [Nat8]) : Bool {

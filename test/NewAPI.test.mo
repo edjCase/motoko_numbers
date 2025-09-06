@@ -1,10 +1,10 @@
 import FloatX "../src/FloatX";
 import IntX "../src/IntX";
 import NatX "../src/NatX";
-import Buffer "mo:buffer";
-import List "mo:core/List";
+import Buffer "mo:buffer@0";
+import List "mo:core@1/List";
 import { test } "mo:test";
-import Runtime "mo:core/Runtime";
+import Runtime "mo:core@1/Runtime";
 
 test(
   "toBytes API",

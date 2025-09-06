@@ -1,18 +1,18 @@
-import Buffer "mo:buffer";
-import Int "mo:core/Int";
-import Int16 "mo:core/Int16";
-import Int32 "mo:core/Int32";
-import Int64 "mo:core/Int64";
-import Int8 "mo:core/Int8";
-import Iter "mo:core/Iter";
-import List "mo:core/List";
-import Nat64 "mo:core/Nat64";
-import Nat8 "mo:core/Nat8";
-import Nat "mo:core/Nat";
-import Array "mo:core/Array";
+import Buffer "mo:buffer@0";
+import Int "mo:core@1/Int";
+import Int16 "mo:core@1/Int16";
+import Int32 "mo:core@1/Int32";
+import Int64 "mo:core@1/Int64";
+import Int8 "mo:core@1/Int8";
+import Iter "mo:core@1/Iter";
+import List "mo:core@1/List";
+import Nat64 "mo:core@1/Nat64";
+import Nat8 "mo:core@1/Nat8";
+import Nat "mo:core@1/Nat";
+import Array "mo:core@1/Array";
 import NatX "./NatX";
 import Util "./Util";
-import Text "mo:core/Text";
+import Text "mo:core@1/Text";
 
 module {
   public type Format = NatX.Format;

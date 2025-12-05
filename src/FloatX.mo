@@ -7,6 +7,9 @@ import List "mo:core@1/List";
 import Nat "mo:core@1/Nat";
 import Nat64 "mo:core@1/Nat64";
 import NatX "./NatX";
+import Char "mo:core@1/Char";
+import Text "mo:core@1/Text";
+import Nat32 "mo:core@1/Nat32";
 
 module {
 
@@ -17,6 +20,11 @@ module {
     isNegative : Bool;
     exponent : ?Int;
     mantissa : Nat;
+  };
+
+  public type ToTextOptions = {
+    exponent : { #none; #scientific; #engineering; #auto };
+    precision : ?Nat; // Null = shortest accurate
   };
 
   /// Compares two floating-point numbers for near equality within specified tolerances.
@@ -309,6 +317,100 @@ module {
     };
   };
 
+  /// Converts a `FloatX` to its textual representation.
+  /// Equivalent to `toTextAdvanced` with auto exponent and null precision.
+  ///
+  /// ```motoko
+  /// let floatX : FloatX = fromFloat(3.14159, #f32);
+  /// let text : Text = toText(floatX); // Text is "3.14159"
+  /// ```
+  public func toText(fX : FloatX) : Text {
+    toTextAdvanced(fX, { exponent = #auto; precision = null });
+  };
+
+  /// Converts a `FloatX` to its textual representation.
+  ///
+  /// ```motoko
+  /// let floatX : FloatX = fromFloat(23.0, #f32);
+  /// let options = { exponent = #scientific; precision = ?3; };
+  /// let formattedText = toTextAdvanced(floatX, options); // Text is "2.300e+1"
+  /// ```
+  public func toTextAdvanced(fX : FloatX, options : ToTextOptions) : Text {
+
+    if (isNaN(fX)) return "NaN";
+    if (isPosInf(fX)) return "inf";
+    if (isNegInf(fX)) return "-inf";
+
+    let sign = if (fX.isNegative) "-" else "";
+
+    if (fX.mantissa == 0 and fX.exponent == null) {
+      return sign # "0.0";
+    };
+
+    let float = toFloat(fX);
+    let absFloat = if (fX.isNegative) -float else float;
+    if (absFloat == 0.0) return sign # "0.0";
+
+    let (useScientific, isEngineering) = switch (options.exponent) {
+      case (#scientific) (true, false);
+      case (#auto) (absFloat < 0.0001 or absFloat >= 1000000.0, false);
+      case (#engineering) (true, true);
+      case (#none) (false, false);
+    };
+
+    if (useScientific) {
+      var exp = Float.toInt(Float.floor(Float.log(absFloat) / Float.log(10.0)));
+
+      var mantissa = absFloat / power(10.0, exp);
+
+      // Fix floating point precision issues
+      while (mantissa >= 10.0) {
+        exp += 1;
+        mantissa := absFloat / power(10.0, exp);
+      };
+
+      // apply engineering notation to the corrected exponent (multiple of 3)
+      if (isEngineering) {
+        let floorDiv = Float.floor(Float.fromInt(exp) / 3.0);
+        exp := Float.toInt(floorDiv) * 3;
+        mantissa := absFloat / power(10.0, exp);
+      };
+
+      let mantissaStr = floatToFixedPrecision(mantissa, options.precision);
+      sign # mantissaStr # "e" # (if (exp >= 0) "+" else "") # Int.toText(exp);
+    } else {
+      sign # floatToFixedPrecision(absFloat, options.precision);
+    };
+  };
+
+  /// Parses a text string to create a `FloatX` with the specified precision.
+  /// Supports standard decimal notation, scientific notation (e.g., "1.5e-10"),
+  /// and special values like "NaN", "inf", and "-inf".
+  ///
+  /// ```motoko
+  /// let floatX1 = fromText("3.14159", #f32);
+  /// let floatX2 = fromText("1.5e-10", #f64);
+  /// let floatX3 = fromText("NaN", #f32);
+  /// ```
+  public func fromText(text : Text, precision : FloatPrecision) : ?FloatX {
+    let trimmed = Text.trim(
+      text,
+      #predicate(Char.isWhitespace),
+    );
+
+    if (trimmed == "" or trimmed == "NaN" or trimmed == "nan") {
+      return ?fromFloat(0.0 / 0.0, precision);
+    };
+    if (trimmed == "inf" or trimmed == "Infinity" or trimmed == "+inf") {
+      return ?fromFloat(1.0 / 0.0, precision);
+    };
+    if (trimmed == "-inf" or trimmed == "-Infinity") {
+      return ?fromFloat(-1.0 / 0.0, precision);
+    };
+
+    parseFloat(trimmed, precision);
+  };
+
   private func calculateExponent(value : Float, exponent : Float) : Float {
     if (exponent < 0) {
       // Negative exponents arent allowed??
@@ -350,6 +452,155 @@ module {
 
   private func getExponentWithAllOnes(bitInfo : PrecisionBitInfo) : Int {
     2 ** bitInfo.exponentBitLength - 1 - bitInfo.maxExponent; // all 1s
+  };
+
+  private func parseFloat(text : Text, precision : FloatPrecision) : ?FloatX {
+    let chars = Text.toArray(text);
+    if (chars.size() == 0) return null;
+
+    var pos = 0;
+    var isNegative = false;
+
+    // Parse sign
+    if (chars[pos] == '-') {
+      isNegative := true;
+      pos += 1;
+    } else if (chars[pos] == '+') {
+      pos += 1;
+    };
+
+    if (pos >= chars.size()) return null;
+
+    // Parse decimal float
+    parseDecimalFloat(chars, pos, isNegative, precision);
+  };
+
+  private func parseDecimalFloat(
+    chars : [Char],
+    start : Nat,
+    isNegative : Bool,
+    precision : FloatPrecision,
+  ) : ?FloatX {
+    var pos = start;
+    var intPart : Nat = 0;
+    var fracPart : Nat = 0;
+    var fracDigits : Nat = 0;
+    var hasDecimal = false;
+    var exponentOrNull : ?Int = null;
+
+    // Parse integer part
+    while (pos < chars.size() and Char.isDigit(chars[pos])) {
+      intPart := intPart * 10 + Nat32.toNat(Char.toNat32(chars[pos]) - Char.toNat32('0'));
+      pos += 1;
+    };
+
+    // Parse decimal point and fractional part
+    if (pos < chars.size() and chars[pos] == '.') {
+      hasDecimal := true;
+      pos += 1;
+      while (pos < chars.size() and Char.isDigit(chars[pos])) {
+        fracPart := fracPart * 10 + Nat32.toNat(Char.toNat32(chars[pos]) - Char.toNat32('0'));
+        fracDigits += 1;
+        pos += 1;
+      };
+    };
+
+    // Parse exponent
+    if (pos < chars.size() and (chars[pos] == 'e' or chars[pos] == 'E')) {
+      pos += 1;
+      if (pos >= chars.size()) return null;
+
+      var expNeg = false;
+      if (chars[pos] == '-') {
+        expNeg := true;
+        pos += 1;
+      } else if (chars[pos] == '+') {
+        pos += 1;
+      };
+
+      var exp : Nat = 0;
+      while (pos < chars.size() and Char.isDigit(chars[pos])) {
+        exp := exp * 10 + Nat32.toNat(Char.toNat32(chars[pos]) - Char.toNat32('0'));
+        pos += 1;
+      };
+      if (exp > 0) {
+        exponentOrNull := ?(if (expNeg) -exp else exp);
+      };
+    };
+
+    // Reconstruct the float value
+    var value : Float = Float.fromInt(intPart);
+    if (fracDigits > 0) {
+      let divisor = power(10.0, fracDigits);
+      value += Float.fromInt(fracPart) / divisor;
+    };
+    switch (exponentOrNull) {
+      case (null) ();
+      case (?exponent) value *= power(10.0, exponent);
+    };
+    if (isNegative) {
+      value := -value;
+    };
+
+    ?fromFloat(value, precision);
+  };
+
+  private func floatToFixedPrecision(value : Float, precisionOrNull : ?Nat) : Text {
+    let intPart = Float.toInt(Float.floor(value));
+    let fracPart = value - Float.fromInt(intPart);
+
+    if (fracPart == 0.0 and precisionOrNull == null) {
+      return Int.toText(intPart) # ".0";
+    };
+
+    var result = Int.toText(intPart) # ".";
+
+    var frac = fracPart;
+
+    let endCaseCheck = switch (precisionOrNull) {
+      case (null) func() : Bool {
+        frac == 0.0;
+      };
+      case (?precsion) {
+        var p : Int = precsion;
+        func() : Bool {
+          let result = p <= 0;
+          p -= 1;
+          result;
+        };
+      };
+    };
+
+    label l loop {
+      if (endCaseCheck()) break l;
+      frac *= 10.0;
+      let digit = Float.toInt(Float.floor(frac + 0.5e-9)); // Add small epsilon before floor
+      result #= Int.toText(digit);
+      frac -= Float.fromInt(digit);
+    };
+
+    result;
+  };
+
+  private func power(base : Float, exp : Int) : Float {
+    if (exp == 0) return 1.0;
+    if (exp > 0) {
+      var result : Float = 1.0;
+      var e = exp;
+      while (e > 0) {
+        result *= base;
+        e -= 1;
+      };
+      result;
+    } else {
+      var result : Float = 1.0;
+      var e = -exp;
+      while (e > 0) {
+        result /= base;
+        e -= 1;
+      };
+      result;
+    };
   };
 
 };

@@ -124,6 +124,11 @@ public func isNaN(fX: FloatX) : Bool;
 public func isPosInf(fX: FloatX) : Bool;
 public func isNegInf(fX: FloatX) : Bool;
 
+// Text conversion
+public func toText(fX: FloatX) : Text;
+public func toTextAdvanced(fX: FloatX, options: ToTextOptions) : Text;
+public func fromText(text: Text, precision: FloatPrecision) : ?FloatX;
+
 // Binary encoding
 public func toBytes(value: FloatX, encoding: {#lsb; #msb}) : [Nat8];
 public func toBytesBuffer(buffer: Buffer.Buffer<Nat8>, value: FloatX, encoding: {#lsb; #msb});

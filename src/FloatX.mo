@@ -164,7 +164,7 @@ module {
 
     let sign = if (fX.isNegative) -1.0 else 1.0;
     let (exponent : Int, x : Nat) = switch (fX.exponent) {
-      case (null) (-14, 0); // If null, its subnormal. use min exponent here
+      case (null) (bitInfo.minExponent, 0); // If null, its subnormal. use min exponent here
       case (?exponent) (exponent, 1);
     };
     let expValue : Float = calculateExponent(2, Float.fromInt(exponent));

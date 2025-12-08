@@ -205,6 +205,44 @@ test(
       { text = "2.5"; precision = #f16; expectedValue = 2.5 },
       { text = "-100.5"; precision = #f32; expectedValue = -100.5 },
       { text = "0.125"; precision = #f32; expectedValue = 0.125 }, // Powers of 2 are exact
+      { text = "1e-308"; precision = #f64; expectedValue = 1e-308 },
+      {
+        text = "2.225073858507201e-308";
+        precision = #f64;
+        expectedValue = 2.225073858507201e-308;
+      }, // Smallest normal f64
+      { text = "5e-324"; precision = #f64; expectedValue = 5e-324 }, // Smallest subnormal f64
+      {
+        text = "1.401298464324817e-45";
+        precision = #f32;
+        expectedValue = 1.401298464324817e-45;
+      }, // Smallest subnormal f32
+      {
+        text = "1.175494350822287e-38";
+        precision = #f32;
+        expectedValue = 1.175494350822287e-38;
+      }, // Smallest normal f32
+      {
+        text = "6.103515625e-5";
+        precision = #f16;
+        expectedValue = 6.103515625e-5;
+      }, // Smallest normal f16
+      {
+        text = "5.960464477539063e-8";
+        precision = #f16;
+        expectedValue = 5.960464477539063e-8;
+      }, // Smallest subnormal f16
+      {
+        text = "1.7976931348623157e308";
+        precision = #f64;
+        expectedValue = 1.7976931348623157e308;
+      }, // Max f64
+      {
+        text = "3.4028234663852886e38";
+        precision = #f32;
+        expectedValue = 3.4028234663852886e38;
+      }, // Max f32
+      { text = "65504.0"; precision = #f16; expectedValue = 65504.0 }, // Max f16
     ];
 
     for (testCase in cases.vals()) {
@@ -215,16 +253,14 @@ test(
         };
         case (?floatX) {
           let actualValue = FloatX.toFloat(floatX);
-          let expectedFX = FloatX.fromFloat(testCase.expectedValue, testCase.precision);
-          let expectedValue = FloatX.toFloat(expectedFX);
 
           // Handle NaN separately since NaN != NaN
           if (Float.isNaN(testCase.expectedValue)) {
             if (not FloatX.isNaN(floatX)) {
               Runtime.trap("fromText test failed for: '" # testCase.text # "'\nExpected: NaN\nActual: " # Float.format(#exact, actualValue));
             };
-          } else if (Float.abs(actualValue - expectedValue) > 0.00001) {
-            Runtime.trap("fromText test failed for: '" # testCase.text # "'\nExpected: " # Float.format(#exact, expectedValue) # "\nActual: " # Float.format(#exact, actualValue) # "\nExpectedFX: " # debug_show (expectedFX) # "\nActualFX: " # debug_show (floatX));
+          } else if (Float.abs(actualValue - testCase.expectedValue) > 0.00001) {
+            Runtime.trap("fromText test failed for: '" # testCase.text # "'\nExpected: " # Float.format(#exact, testCase.expectedValue) # "\nActual: " # Float.format(#exact, actualValue) # "\nActualFX: " # debug_show (floatX));
           };
         };
       };

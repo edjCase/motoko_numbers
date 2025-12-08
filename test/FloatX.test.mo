@@ -243,6 +243,36 @@ test(
         expectedValue = 3.4028234663852886e38;
       }, // Max f32
       { text = "65504.0"; precision = #f16; expectedValue = 65504.0 }, // Max f16
+      // Hex integer tests
+      { text = "0x2a"; precision = #f32; expectedValue = 42.0 },
+      { text = "0xFF"; precision = #f32; expectedValue = 255.0 },
+      { text = "0x0"; precision = #f32; expectedValue = 0.0 },
+      { text = "0x1"; precision = #f32; expectedValue = 1.0 },
+      { text = "-0x10"; precision = #f32; expectedValue = -16.0 },
+      { text = "+0xA"; precision = #f32; expectedValue = 10.0 },
+      // Hex with underscores
+      { text = "0x1_A_B"; precision = #f32; expectedValue = 427.0 }, // 1*256 + 10*16 + 11
+      { text = "0x1_0_0"; precision = #f32; expectedValue = 256.0 },
+      { text = "0xF_F_F"; precision = #f32; expectedValue = 4095.0 },
+      // Hex float with decimal point
+      { text = "0x1.8"; precision = #f32; expectedValue = 1.5 }, // 1 + 8/16
+      { text = "0x2.4"; precision = #f32; expectedValue = 2.25 }, // 2 + 4/16
+      { text = "0x0.8"; precision = #f32; expectedValue = 0.5 }, // 8/16
+      { text = "0xA.C"; precision = #f32; expectedValue = 10.75 }, // 10 + 12/16
+      { text = "-0x1.0"; precision = #f32; expectedValue = -1.0 },
+      // Hex float with binary exponent
+      { text = "0x1.8p2"; precision = #f32; expectedValue = 6.0 }, // 1.5 * 2^2 = 1.5 * 4 = 6
+      { text = "0x1.0p-4"; precision = #f32; expectedValue = 0.0625 }, // 1.0 * 2^-4 = 1/16
+      { text = "-0x1.0p-4"; precision = #f32; expectedValue = -0.0625 },
+      { text = "0x1.0p0"; precision = #f32; expectedValue = 1.0 }, // 1.0 * 2^0
+      { text = "0x1.0p1"; precision = #f32; expectedValue = 2.0 }, // 1.0 * 2^1
+      { text = "0x2.0p3"; precision = #f32; expectedValue = 16.0 }, // 2.0 * 2^3
+      { text = "0xF.Fp10"; precision = #f32; expectedValue = 16320.0 }, // 15.9375 * 1024
+      { text = "0x1p-10"; precision = #f32; expectedValue = 0.0009765625 }, // 1 * 2^-10
+      { text = "0x1.4p3"; precision = #f64; expectedValue = 10.0 }, // 1.25 * 8
+      // Combined hex features
+      { text = "0x1_0.8p2"; precision = #f32; expectedValue = 66.0 }, // 16.5 * 4
+      { text = "-0xA_B.Cp-2"; precision = #f32; expectedValue = -42.9375 }, // -(171.75 / 4)
     ];
 
     for (testCase in cases.vals()) {
@@ -441,6 +471,286 @@ test(
       let result = FloatX.toTextAdvanced(floatX, testCase.options);
       if (result != testCase.expected) {
         Runtime.trap("toText test failed\nBytes: " # Util.toHexString(testCase.bytes) # "\nOptions: " # debug_show (testCase.options) # "\nExpected: '" # testCase.expected # "'\nActual: '" # result # "'");
+      };
+    };
+  },
+);
+
+type ToTextHexTestCase = {
+  value : Float;
+  precision : FloatX.FloatPrecision;
+  options : FloatX.ToTextHexOptions;
+  expected : Text;
+};
+
+test(
+  "toTextHex",
+  func() {
+    let cases : [ToTextHexTestCase] = [
+      // Basic integers
+      {
+        value = 0.0;
+        precision = #f32;
+        options = { uppercase = false; exponent = #always };
+        expected = "0x0.0p+0";
+      },
+      {
+        value = 1.0;
+        precision = #f32;
+        options = { uppercase = false; exponent = #always };
+        expected = "0x1.0p+0";
+      },
+      {
+        value = 42.0;
+        precision = #f32;
+        options = { uppercase = false; exponent = #always };
+        expected = "0x1.5p+5";
+      }, // 1.3125 * 2^5
+      {
+        value = 255.0;
+        precision = #f32;
+        options = { uppercase = true; exponent = #always };
+        expected = "0X1.FEP+7";
+      }, // 1.9921875 * 2^7
+
+      // Negative values
+      {
+        value = -1.0;
+        precision = #f32;
+        options = { uppercase = false; exponent = #always };
+        expected = "-0x1.0p+0";
+      },
+      {
+        value = -16.0;
+        precision = #f32;
+        options = { uppercase = false; exponent = #always };
+        expected = "-0x1.0p+4";
+      },
+
+      // Fractional values
+      {
+        value = 1.5;
+        precision = #f32;
+        options = { uppercase = false; exponent = #always };
+        expected = "0x1.8p+0";
+      }, // 1 + 8/16
+      {
+        value = 0.5;
+        precision = #f32;
+        options = { uppercase = false; exponent = #always };
+        expected = "0x1.0p-1";
+      },
+      {
+        value = 0.0625;
+        precision = #f32;
+        options = { uppercase = false; exponent = #always };
+        expected = "0x1.0p-4";
+      }, // 2^-4
+      {
+        value = -0.0625;
+        precision = #f32;
+        options = { uppercase = false; exponent = #always };
+        expected = "-0x1.0p-4";
+      },
+
+      // With binary exponents
+      {
+        value = 6.0;
+        precision = #f32;
+        options = { uppercase = false; exponent = #always };
+        expected = "0x1.8p+2";
+      }, // 1.5 * 2^2
+      {
+        value = 10.0;
+        precision = #f64;
+        options = { uppercase = false; exponent = #always };
+        expected = "0x1.4p+3";
+      }, // 1.25 * 2^3
+
+      // Without exponent (when possible)
+      {
+        value = 1.5;
+        precision = #f32;
+        options = { uppercase = false; exponent = #none };
+        expected = "0x1.8";
+      },
+      {
+        value = 10.75;
+        precision = #f32;
+        options = { uppercase = false; exponent = #omitZero };
+        expected = "0x1.58p+3";
+      }, // Auto includes exponent when needed
+
+      // Uppercase vs lowercase
+      {
+        value = 10.75;
+        precision = #f32;
+        options = { uppercase = true; exponent = #always };
+        expected = "0X1.58P+3";
+      },
+      {
+        value = 10.75;
+        precision = #f32;
+        options = { uppercase = false; exponent = #always };
+        expected = "0x1.58p+3";
+      },
+
+      // Special values
+      {
+        value = 0.0 / 0.0;
+        precision = #f32;
+        options = { uppercase = false; exponent = #always };
+        expected = "NaN";
+      },
+      {
+        value = 1.0 / 0.0;
+        precision = #f32;
+        options = { uppercase = false; exponent = #always };
+        expected = "inf";
+      },
+      {
+        value = -1.0 / 0.0;
+        precision = #f32;
+        options = { uppercase = false; exponent = #always };
+        expected = "-inf";
+      },
+
+      // Different precisions
+      {
+        value = 1.5;
+        precision = #f16;
+        options = { uppercase = false; exponent = #always };
+        expected = "0x1.8p+0";
+      },
+      {
+        value = 1.5;
+        precision = #f64;
+        options = { uppercase = false; exponent = #always };
+        expected = "0x1.8p+0";
+      },
+
+      // Powers of 2
+      {
+        value = 2.0;
+        precision = #f32;
+        options = { uppercase = false; exponent = #always };
+        expected = "0x1.0p+1";
+      },
+      {
+        value = 16.0;
+        precision = #f32;
+        options = { uppercase = false; exponent = #always };
+        expected = "0x1.0p+4";
+      },
+      {
+        value = 0.0009765625;
+        precision = #f32;
+        options = { uppercase = false; exponent = #always };
+        expected = "0x1.0p-10";
+      }, // 2^-10
+
+      // Complex fractional
+      {
+        value = 2.25;
+        precision = #f32;
+        options = { uppercase = false; exponent = #always };
+        expected = "0x1.2p+1";
+      }, // 2 + 4/16
+      {
+        value = 16.5;
+        precision = #f32;
+        options = { uppercase = false; exponent = #omitZero };
+        expected = "0x1.08p+4";
+      },
+
+      // Very small and very large
+      {
+        value = 1e-10;
+        precision = #f64;
+        options = { uppercase = false; exponent = #always };
+        expected = "0x1.b7cdfd9d7bdbbp-34";
+      },
+      {
+        value = 1e10;
+        precision = #f64;
+        options = { uppercase = false; exponent = #always };
+        expected = "0x1.2a05f2p+33";
+      },
+
+      // #omitZero tests - should include exponent only when non-zero
+      {
+        value = 1.0;
+        precision = #f32;
+        options = { uppercase = false; exponent = #omitZero };
+        expected = "0x1.0"; // exponent is 0, so omitted
+      },
+      {
+        value = 1.5;
+        precision = #f32;
+        options = { uppercase = false; exponent = #omitZero };
+        expected = "0x1.8"; // exponent is 0, so omitted
+      },
+      {
+        value = 2.0;
+        precision = #f32;
+        options = { uppercase = false; exponent = #omitZero };
+        expected = "0x1.0p+1"; // exponent is 1, so included
+      },
+      {
+        value = 0.5;
+        precision = #f32;
+        options = { uppercase = false; exponent = #omitZero };
+        expected = "0x1.0p-1"; // exponent is -1, so included
+      },
+      {
+        value = 0.0;
+        precision = #f32;
+        options = { uppercase = false; exponent = #omitZero };
+        expected = "0x0.0"; // zero has exponent 0, so omitted
+      },
+      {
+        value = -1.0;
+        precision = #f32;
+        options = { uppercase = false; exponent = #omitZero };
+        expected = "-0x1.0"; // exponent is 0, so omitted
+      },
+      {
+        value = -4.0;
+        precision = #f32;
+        options = { uppercase = false; exponent = #omitZero };
+        expected = "-0x1.0p+2"; // exponent is 2, so included
+      },
+      {
+        value = 1.25;
+        precision = #f64;
+        options = { uppercase = false; exponent = #omitZero };
+        expected = "0x1.4"; // 1.25 = 1 + 4/16, exponent is 0
+      },
+      {
+        value = 8.0;
+        precision = #f32;
+        options = { uppercase = true; exponent = #omitZero };
+        expected = "0X1.0P+3"; // exponent is 3, uppercase
+      },
+      {
+        value = 0.125;
+        precision = #f32;
+        options = { uppercase = false; exponent = #omitZero };
+        expected = "0x1.0p-3"; // 2^-3, exponent included
+      },
+    ];
+
+    for (testCase in cases.vals()) {
+      let floatX = FloatX.fromFloat(testCase.value, testCase.precision);
+      let result = FloatX.toTextHex(floatX, testCase.options);
+
+      // For NaN, just check if both are NaN
+      if (Float.isNaN(testCase.value)) {
+        if (result != "NaN") {
+          Runtime.trap("toTextHex test failed for NaN\nExpected: 'NaN'\nActual: '" # result # "'");
+        };
+      } else if (result != testCase.expected) {
+        Runtime.trap("toTextHex test failed\nValue: " # Float.format(#exact, testCase.value) # "\nPrecision: " # debug_show (testCase.precision) # "\nOptions: " # debug_show (testCase.options) # "\nExpected: '" # testCase.expected # "'\nActual: '" # result # "'\nFloatX: " # debug_show (floatX));
       };
     };
   },

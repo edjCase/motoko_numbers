@@ -27,6 +27,17 @@ module {
     precision : ?Nat; // Null = shortest accurate
   };
 
+  /// Options for hexadecimal float text formatting
+  /// - `uppercase`: Use uppercase hex digits and prefix (0xFF vs 0xff)
+  /// - `exponent`: Control when to display binary exponent (p notation)
+  ///   - `#always`: Always show exponent
+  ///   - `#none`: Never show exponent
+  ///   - `#omitZero`: Show exponent only when non-zero
+  public type ToTextHexOptions = {
+    uppercase : Bool; // Use uppercase hex digits (0xFF vs 0xff)
+    exponent : { #none; #always; #omitZero }; // Control binary exponent display (p notation)
+  };
+
   /// Compares two floating-point numbers for near equality within specified tolerances.
   ///
   /// ```motoko
@@ -383,14 +394,145 @@ module {
     };
   };
 
+  /// Converts a `FloatX` to its hexadecimal floating-point representation.
+  /// Hex floats use binary exponents (p notation) and are exact representations.
+  ///
+  /// Exponent options:
+  /// - `#always`: Always include the binary exponent (e.g., "0x1.8p+0")
+  /// - `#none`: Never include the exponent (e.g., "0x1.8")
+  /// - `#omitZero`: Omit exponent only when it's zero (e.g., "0x1.8" for exp=0, "0x1.0p+1" for exp=1)
+  ///
+  /// ```motoko
+  /// let floatX : FloatX = fromFloat(1.5, #f32);
+  /// let hex1 = toTextHex(floatX, { uppercase = true; exponent = #always }); // "0x1.8p+0"
+  /// let hex2 = toTextHex(floatX, { uppercase = false; exponent = #none }); // "0x1.8"
+  /// let hex3 = toTextHex(floatX, { uppercase = false; exponent = #omitZero }); // "0x1.8" (no exponent since exp=0)
+  ///
+  /// let floatX2 : FloatX = fromFloat(6.0, #f32); // 1.5 * 2^2
+  /// let hex4 = toTextHex(floatX2, { uppercase = false; exponent = #omitZero }); // "0x1.8p+2"
+  /// ```
+  public func toTextHex(fX : FloatX, options : ToTextHexOptions) : Text {
+    if (isNaN(fX)) return "NaN";
+    if (isPosInf(fX)) return "inf";
+    if (isNegInf(fX)) return "-inf";
+
+    let sign = if (fX.isNegative) "-" else "";
+
+    if (fX.mantissa == 0 and fX.exponent == null) {
+      let includeExp = switch (options.exponent) {
+        case (#always) true;
+        case (#none) false;
+        case (#omitZero) false; // exponent is 0 for zero
+      };
+      if (includeExp) {
+        return sign # (if (options.uppercase) "0X0.0P+0" else "0x0.0p+0");
+      } else {
+        return sign # (if (options.uppercase) "0X0.0" else "0x0.0");
+      };
+    };
+
+    let bitInfo = getPrecisionBitInfo(fX.precision);
+    let hexDigits = if (options.uppercase) "0123456789ABCDEF" else "0123456789abcdef";
+    let prefix = if (options.uppercase) "0X" else "0x";
+
+    // For normalized numbers: value = 2^exponent * (1 + mantissa/2^mantissaBits)
+    // For denormalized: value = 2^minExponent * (mantissa/2^mantissaBits)
+
+    let isNormalized = fX.exponent != null;
+    let actualExponent = switch (fX.exponent) {
+      case (null) bitInfo.minExponent; // denormalized
+      case (?exp) exp;
+    };
+
+    // Construct mantissa with implicit leading bit for normalized numbers
+    let fullMantissa = if (isNormalized) {
+      bitInfo.maxMantissaDenomiator + fX.mantissa; // Add implicit 1
+    } else {
+      fX.mantissa;
+    };
+
+    // Convert mantissa to hex string
+    var hexStr = "";
+
+    // Extract integer part (should be 1 for normalized, 0 for denormalized)
+    let intPart = fullMantissa / bitInfo.maxMantissaDenomiator;
+    hexStr #= natToHexDigit(intPart, hexDigits);
+
+    // Extract fractional part
+    let fracMantissa = fullMantissa % bitInfo.maxMantissaDenomiator;
+
+    if (fracMantissa > 0) {
+      hexStr #= ".";
+      // Convert fractional mantissa to hex digits
+      // Extract bits from MSB to LSB, 4 bits at a time
+      var remainingBits = bitInfo.mantissaBitLength;
+      var fracHex = "";
+
+      while (remainingBits > 0) {
+        let bitsToExtract = if (remainingBits >= 4) 4 else remainingBits;
+        remainingBits -= bitsToExtract;
+
+        // Extract the top bits
+        let shift = remainingBits;
+        let hexDigit = (fracMantissa / (2 ** shift)) % (2 ** bitsToExtract);
+        fracHex #= natToHexDigit(hexDigit, hexDigits);
+      };
+
+      // Trim trailing zeros
+      let fracChars = Text.toArray(fracHex);
+      var lastNonZero = 0;
+      var i = fracChars.size();
+      while (i > 0) {
+        i -= 1;
+        if (fracChars[i] != '0') {
+          lastNonZero := i + 1;
+          i := 0; // break
+        };
+      };
+
+      if (lastNonZero > 0) {
+        var j = 0;
+        while (j < lastNonZero) {
+          hexStr #= Text.fromChar(fracChars[j]);
+          j += 1;
+        };
+      } else {
+        hexStr #= "0";
+      };
+    } else {
+      hexStr #= ".0";
+    };
+
+    let result = sign # prefix # hexStr;
+
+    let shouldIncludeExponent = switch (options.exponent) {
+      case (#always) true;
+      case (#none) false;
+      case (#omitZero) actualExponent != 0; // Omit exponent only when it's zero
+    };
+
+    if (shouldIncludeExponent) {
+      let expChar = if (options.uppercase) "P" else "p";
+      result # expChar # (if (actualExponent >= 0) "+" else "") # Int.toText(actualExponent);
+    } else {
+      result;
+    };
+  };
+
+  private func natToHexDigit(n : Nat, hexDigits : Text) : Text {
+    let chars = Text.toArray(hexDigits);
+    Text.fromChar(chars[n]);
+  };
+
   /// Parses a text string to create a `FloatX` with the specified precision.
   /// Supports standard decimal notation, scientific notation (e.g., "1.5e-10"),
-  /// and special values like "NaN", "inf", and "-inf".
+  /// hex floats (e.g., "0x1.8p2"), and special values like "NaN", "inf", and "-inf".
   ///
   /// ```motoko
   /// let floatX1 = fromText("3.14159", #f32);
   /// let floatX2 = fromText("1.5e-10", #f64);
   /// let floatX3 = fromText("NaN", #f32);
+  /// let floatX4 = fromText("0x1.8p2", #f32); // 6.0
   /// ```
   public func fromText(text : Text, precision : FloatPrecision) : ?FloatX {
     let trimmed = Text.trim(
@@ -471,8 +613,103 @@ module {
 
     if (pos >= chars.size()) return null;
 
-    // Parse decimal float
-    parseDecimalFloat(chars, pos, isNegative, precision);
+    // Check if hex literal (0x or 0X)
+    if (pos + 1 < chars.size() and chars[pos] == '0' and (chars[pos + 1] == 'x' or chars[pos + 1] == 'X')) {
+      parseHexFloat(chars, pos + 2, isNegative, precision);
+    } else {
+      // Parse decimal float
+      parseDecimalFloat(chars, pos, isNegative, precision);
+    };
+  };
+
+  private func isHexDigit(c : Char) : Bool {
+    Char.isDigit(c) or (c >= 'a' and c <= 'f') or (c >= 'A' and c <= 'F');
+  };
+
+  private func hexCharToNat(c : Char) : Nat {
+    if (Char.isDigit(c)) {
+      Nat32.toNat(Char.toNat32(c) - Char.toNat32('0'));
+    } else if (c >= 'a' and c <= 'f') {
+      Nat32.toNat(Char.toNat32(c) - Char.toNat32('a')) + 10;
+    } else {
+      Nat32.toNat(Char.toNat32(c) - Char.toNat32('A')) + 10;
+    };
+  };
+
+  private func parseHexFloat(
+    chars : [Char],
+    start : Nat,
+    isNegative : Bool,
+    precision : FloatPrecision,
+  ) : ?FloatX {
+    var pos = start;
+    var intPart : Nat = 0;
+    var fracPart : Nat = 0;
+    var fracDigits : Nat = 0;
+    var hasDecimal = false;
+    var binaryExponentOrNull : ?Int = null;
+
+    // Parse hex integer part (skip underscores)
+    while (pos < chars.size() and (isHexDigit(chars[pos]) or chars[pos] == '_')) {
+      if (chars[pos] != '_') {
+        intPart := intPart * 16 + hexCharToNat(chars[pos]);
+      };
+      pos += 1;
+    };
+
+    // Parse decimal point and fractional part
+    if (pos < chars.size() and chars[pos] == '.') {
+      hasDecimal := true;
+      pos += 1;
+      while (pos < chars.size() and (isHexDigit(chars[pos]) or chars[pos] == '_')) {
+        if (chars[pos] != '_') {
+          fracPart := fracPart * 16 + hexCharToNat(chars[pos]);
+          fracDigits += 1;
+        };
+        pos += 1;
+      };
+    };
+
+    // Parse binary exponent (p or P)
+    if (pos < chars.size() and (chars[pos] == 'p' or chars[pos] == 'P')) {
+      pos += 1;
+      if (pos >= chars.size()) return null;
+
+      var expNeg = false;
+      if (chars[pos] == '-') {
+        expNeg := true;
+        pos += 1;
+      } else if (chars[pos] == '+') {
+        pos += 1;
+      };
+
+      var exp : Nat = 0;
+      while (pos < chars.size() and Char.isDigit(chars[pos])) {
+        exp := exp * 10 + Nat32.toNat(Char.toNat32(chars[pos]) - Char.toNat32('0'));
+        pos += 1;
+      };
+      if (exp > 0 or expNeg) {
+        binaryExponentOrNull := ?(if (expNeg) -exp else exp);
+      };
+    };
+
+    // Reconstruct the float value from hex
+    var value : Float = Float.fromInt(intPart);
+    if (fracDigits > 0) {
+      // Each hex digit represents 4 bits, so divide by 16^fracDigits
+      let divisor = power(16.0, fracDigits);
+      value += Float.fromInt(fracPart) / divisor;
+    };
+    // Apply binary exponent (multiply by 2^exp)
+    switch (binaryExponentOrNull) {
+      case (null) ();
+      case (?exponent) value *= power(2.0, exponent);
+    };
+    if (isNegative) {
+      value := -value;
+    };
+
+    ?fromFloat(value, precision);
   };
 
   private func parseDecimalFloat(

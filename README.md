@@ -105,6 +105,30 @@ if (FloatX.isNaN(float16)) {
 };
 ```
 
+### Example 6: Hexadecimal Float Representation
+
+```motoko
+import FloatX "mo:xtended-numbers/FloatX";
+
+// Convert float to hexadecimal representation
+let float : Float = 1.5;
+let floatX = FloatX.fromFloat(float, #f32);
+
+// Different hex formatting options
+let hex1 = FloatX.toTextHex(floatX, { uppercase = false; exponent = #always });
+// Result: "0x1.8p+0"
+
+let hex2 = FloatX.toTextHex(floatX, { uppercase = true; exponent = #omitZero });
+// Result: "0X1.8" (exponent omitted since it's 0)
+
+let hex3 = FloatX.toTextHex(floatX, { uppercase = false; exponent = #none });
+// Result: "0x1.8" (never show exponent)
+
+// Parse hex float strings
+let parsed = FloatX.fromText("0x1.8p+2", #f32);
+// Parses: 1.5 * 2^2 = 6.0
+```
+
 ## API Reference
 
 ### FloatX Module
@@ -112,7 +136,23 @@ if (FloatX.isNaN(float16)) {
 ```motoko
 // Float precision types
 public type FloatPrecision = {#f16; #f32; #f64};
-public type FloatX = {precision: FloatPrecision; /* internal representation */};
+public type FloatX = {
+  precision: FloatPrecision;
+  isNegative: Bool;
+  exponent: ?Int;
+  mantissa: Nat;
+};
+
+// Text formatting options
+public type ToTextOptions = {
+  exponent: {#none; #scientific; #engineering; #auto};
+  precision: ?Nat; // Null = shortest accurate
+};
+
+public type ToTextHexOptions = {
+  uppercase: Bool; // Use uppercase hex digits (0xFF vs 0xff)
+  exponent: {#none; #always; #omitZero}; // Control binary exponent display (p notation)
+};
 
 // Core conversion functions
 public func fromFloat(float: Float, precision: FloatPrecision) : FloatX;
@@ -127,6 +167,7 @@ public func isNegInf(fX: FloatX) : Bool;
 // Text conversion
 public func toText(fX: FloatX) : Text;
 public func toTextAdvanced(fX: FloatX, options: ToTextOptions) : Text;
+public func toTextHex(fX: FloatX, options: ToTextHexOptions) : Text;
 public func fromText(text: Text, precision: FloatPrecision) : ?FloatX;
 
 // Binary encoding
